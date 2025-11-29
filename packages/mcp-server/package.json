@@ -1,0 +1,25 @@
+{
+  "name": "@mcp-tracker/mcp-server",
+  "version": "1.0.0",
+  "description": "MCP Server for workflow tracking",
+  "main": "./dist/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@mcp-tracker/shared": "workspace:*",
+    "@prisma/client": "^5.22.0",
+    "simple-git": "^3.27.0",
+    "glob": "^11.0.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "@types/node": "^22.9.1",
+    "tsx": "^4.19.2"
+  }
+}
