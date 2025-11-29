@@ -1,27 +1,26 @@
 'use client'
 
-import type { WorkflowStatus, TaskStatus } from '@prisma/client'
 import { Badge, type BadgeProps } from '@/components/ui/badge'
 import {
   Loader2,
   CheckCircle2,
   XCircle,
   AlertTriangle,
-  Circle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-type Status = WorkflowStatus | TaskStatus
+// Status string constants (SQLite stores enums as strings)
+type KnownStatus = 'IN_PROGRESS' | 'COMPLETED' | 'SUCCESS' | 'PARTIAL_SUCCESS' | 'FAILED'
 
 interface StatusBadgeProps {
-  status: Status
+  status: string  // Accept any string from DB, handle unknown gracefully
   size?: 'sm' | 'default' | 'lg'
   showIcon?: boolean
   animated?: boolean
 }
 
 const statusConfig: Record<
-  Status,
+  KnownStatus,
   {
     label: string
     variant: BadgeProps['variant']
@@ -61,7 +60,7 @@ export function StatusBadge({
   showIcon = true,
   animated = true,
 }: StatusBadgeProps) {
-  const config = statusConfig[status]
+  const config = statusConfig[status as KnownStatus] ?? statusConfig.IN_PROGRESS
 
   return (
     <Badge

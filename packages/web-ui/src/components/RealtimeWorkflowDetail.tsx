@@ -13,6 +13,7 @@ import { EmptyState } from '@/components/ui/empty-state'
 import { Tooltip } from '@/components/ui/tooltip'
 import { StaggerList, StaggerItem } from '@/components/ui/motion'
 import { cn } from '@/lib/utils'
+import { parseJsonArray } from '@/lib/json-parse'
 
 type TaskWithRelations = Task & {
   decisions: Decision[]
@@ -144,9 +145,9 @@ export function RealtimeWorkflowDetail({
 
       {/* Plan (if exists) */}
       <AnimatePresence>
-        {workflow.plan &&
-          Array.isArray(workflow.plan) &&
-          workflow.plan.length > 0 && (
+        {(() => {
+          const plan = parseJsonArray<{ step: string; goal: string }>(workflow.plan)
+          return plan.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -158,17 +159,16 @@ export function RealtimeWorkflowDetail({
                   Plan
                 </h2>
                 <ol className="list-inside list-decimal space-y-1.5 text-sm text-[hsl(var(--foreground)/0.9)]">
-                  {(workflow.plan as Array<{ step: string; goal: string }>).map(
-                    (item, index) => (
-                      <li key={index} className="leading-relaxed">
-                        {item.goal}
-                      </li>
-                    )
-                  )}
+                  {plan.map((item, index) => (
+                    <li key={index} className="leading-relaxed">
+                      {item.goal}
+                    </li>
+                  ))}
                 </ol>
               </Card>
             </motion.div>
-          )}
+          )
+        })()}
       </AnimatePresence>
 
       {/* Tasks */}

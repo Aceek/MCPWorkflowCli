@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
-import { WorkflowStatus } from '@prisma/client'
 
 export const dynamic = 'force-dynamic'
+
+// Status string constants (SQLite stores enums as strings)
+type WorkflowStatus = 'IN_PROGRESS' | 'COMPLETED' | 'FAILED'
 
 // Zod schema for status validation
 const statusSchema = z

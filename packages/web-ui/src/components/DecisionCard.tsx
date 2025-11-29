@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
+import { parseJsonArray } from '@/lib/json-parse'
 
 interface DecisionCardProps {
   decision: Decision
@@ -50,6 +51,7 @@ const categoryConfig: Record<
 
 export function DecisionCard({ decision }: DecisionCardProps) {
   const category = categoryConfig[decision.category] ?? categoryConfig.OTHER!
+  const optionsConsidered = parseJsonArray(decision.optionsConsidered)
 
   return (
     <motion.div
@@ -71,10 +73,10 @@ export function DecisionCard({ decision }: DecisionCardProps) {
       </p>
 
       {/* Options considered */}
-      {decision.optionsConsidered.length > 0 && (
+      {optionsConsidered.length > 0 && (
         <div className="mt-2 text-xs text-[hsl(var(--muted-foreground))]">
           <span className="font-medium">Options considered:</span>{' '}
-          {decision.optionsConsidered.join(', ')}
+          {optionsConsidered.join(', ')}
         </div>
       )}
 

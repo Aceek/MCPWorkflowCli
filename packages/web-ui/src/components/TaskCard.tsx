@@ -25,6 +25,7 @@ import { IssueCard } from './IssueCard'
 import { FilesList } from './FilesList'
 import { MilestoneTimeline } from './MilestoneTimeline'
 import { cn } from '@/lib/utils'
+import { parseJsonArray } from '@/lib/json-parse'
 
 type TaskWithRelations = Task & {
   decisions: Decision[]
@@ -43,10 +44,19 @@ export function TaskCard({
   formatDuration,
   isSubtask = false,
 }: TaskCardProps) {
+  // Parse JSON arrays (SQLite stores arrays as JSON strings)
+  const areas = parseJsonArray(task.areas)
+  const warnings = parseJsonArray(task.warnings)
+  const filesAdded = parseJsonArray(task.filesAdded)
+  const filesModified = parseJsonArray(task.filesModified)
+  const filesDeleted = parseJsonArray(task.filesDeleted)
+  const achievements = parseJsonArray(task.achievements)
+  const limitations = parseJsonArray(task.limitations)
+
   const hasFiles =
-    task.filesAdded.length > 0 ||
-    task.filesModified.length > 0 ||
-    task.filesDeleted.length > 0
+    filesAdded.length > 0 ||
+    filesModified.length > 0 ||
+    filesDeleted.length > 0
 
   const hasDetails =
     hasFiles ||
@@ -86,10 +96,10 @@ export function TaskCard({
               <Clock className="h-3.5 w-3.5" />
               {formatDuration(task.durationMs)}
             </span>
-            {task.areas.length > 0 && (
+            {areas.length > 0 && (
               <span className="flex items-center gap-1">
                 <FolderOpen className="h-3.5 w-3.5" />
-                {task.areas.join(', ')}
+                {areas.join(', ')}
               </span>
             )}
             {task.testsStatus && (
@@ -101,9 +111,9 @@ export function TaskCard({
           </div>
 
           {/* Scope warnings */}
-          {task.warnings.length > 0 && (
+          {warnings.length > 0 && (
             <div className="mt-3 space-y-1">
-              {task.warnings.map((warning, idx) => (
+              {warnings.map((warning, idx) => (
                 <div
                   key={idx}
                   className="flex items-start gap-2 rounded-[var(--radius)] bg-[hsl(var(--warning-muted))] px-2.5 py-1.5 text-xs text-[hsl(var(--warning))]"
@@ -133,15 +143,15 @@ export function TaskCard({
           )}
 
           {/* Achievements & Limitations */}
-          {(task.achievements.length > 0 || task.limitations.length > 0) && (
+          {(achievements.length > 0 || limitations.length > 0) && (
             <div className="grid gap-4 sm:grid-cols-2">
-              {task.achievements.length > 0 && (
+              {achievements.length > 0 && (
                 <div>
                   <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-[hsl(var(--success))]">
                     Achievements
                   </h4>
                   <ul className="space-y-1.5">
-                    {task.achievements.map((item, idx) => (
+                    {achievements.map((item, idx) => (
                       <li
                         key={idx}
                         className="flex items-start gap-2 text-sm text-[hsl(var(--foreground)/0.9)]"
@@ -154,13 +164,13 @@ export function TaskCard({
                 </div>
               )}
 
-              {task.limitations.length > 0 && (
+              {limitations.length > 0 && (
                 <div>
                   <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-[hsl(var(--warning))]">
                     Limitations
                   </h4>
                   <ul className="space-y-1.5">
-                    {task.limitations.map((item, idx) => (
+                    {limitations.map((item, idx) => (
                       <li
                         key={idx}
                         className="flex items-start gap-2 text-sm text-[hsl(var(--foreground)/0.9)]"
@@ -185,9 +195,9 @@ export function TaskCard({
                 {/* Files changed */}
                 {hasFiles && (
                   <FilesList
-                    added={task.filesAdded}
-                    modified={task.filesModified}
-                    deleted={task.filesDeleted}
+                    added={filesAdded}
+                    modified={filesModified}
+                    deleted={filesDeleted}
                   />
                 )}
 

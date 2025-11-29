@@ -9,6 +9,7 @@
 #   ./dev.sh stop     - Stop all services
 #   ./dev.sh logs     - Show logs (interactive selection)
 #   ./dev.sh status   - Show status of all services
+#   ./dev.sh db:reset - Reset SQLite database
 # =============================================================================
 
 set -e
@@ -22,13 +23,16 @@ CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 BOLD='\033[1m'
 
+# Project root
+PROJECT_ROOT="$(cd "$(dirname "$0")" && pwd)"
+
 # Ports
 PORT_WEBUI=3001
 PORT_WEBSOCKET=3002
-PORT_DB=5433
 
-# Container name
-DB_CONTAINER="mcp-tracker-db"
+# Database (SQLite)
+DB_PATH="$PROJECT_ROOT/packages/shared/prisma/mcp-tracker.db"
+export DATABASE_URL="file:$DB_PATH"
 
 # PID files directory
 PID_DIR="$HOME/.mcp-tracker"
@@ -38,9 +42,6 @@ LOG_DIR="$PID_DIR/logs"
 LOG_MCP="$LOG_DIR/mcp-server.log"
 LOG_WEBUI="$LOG_DIR/web-ui.log"
 
-# Database URL
-export DATABASE_URL="postgresql://mcp_user:mcp_password@localhost:$PORT_DB/mcp_tracker?schema=public"
-
 # =============================================================================
 # Utility Functions
 # =============================================================================
@@ -48,6 +49,7 @@ export DATABASE_URL="postgresql://mcp_user:mcp_password@localhost:$PORT_DB/mcp_t
 print_header() {
     echo -e "\n${CYAN}╔════════════════════════════════════════════════════════════╗${NC}"
     echo -e "${CYAN}║${NC}  ${BOLD}MCP Workflow Tracker${NC} - Development Environment           ${CYAN}║${NC}"
+    echo -e "${CYAN}║${NC}  ${BLUE}Database: SQLite (standalone)${NC}                             ${CYAN}║${NC}"
     echo -e "${CYAN}╚════════════════════════════════════════════════════════════╝${NC}\n"
 }
 
@@ -82,41 +84,62 @@ ensure_dirs() {
 }
 
 # =============================================================================
-# Check Functions
+# Database Functions
 # =============================================================================
 
-check_docker() {
-    if ! command -v docker &> /dev/null; then
-        print_status "error" "Docker is not installed"
-        return 1
-    fi
-
-    if ! docker info &> /dev/null; then
-        print_status "error" "Docker daemon is not running"
-        return 1
-    fi
-
-    return 0
-}
-
-check_db_container() {
-    local status=$(docker inspect -f '{{.State.Status}}' "$DB_CONTAINER" 2>/dev/null || echo "not_found")
-    local health=$(docker inspect -f '{{.State.Health.Status}}' "$DB_CONTAINER" 2>/dev/null || echo "unknown")
-
-    if [ "$status" = "running" ] && [ "$health" = "healthy" ]; then
-        print_status "ok" "PostgreSQL container is running and healthy (port $PORT_DB)"
+check_db() {
+    if [ -f "$DB_PATH" ]; then
+        local size=$(du -h "$DB_PATH" | cut -f1)
+        print_status "ok" "SQLite database exists ($size)"
         return 0
-    elif [ "$status" = "running" ]; then
-        print_status "warn" "PostgreSQL container is running but not healthy yet"
-        return 1
-    elif [ "$status" = "not_found" ]; then
-        print_status "error" "PostgreSQL container not found"
-        return 2
     else
-        print_status "error" "PostgreSQL container is $status"
+        print_status "warn" "SQLite database not found"
         return 1
     fi
 }
+
+init_db() {
+    print_section "Initializing Database"
+
+    cd "$PROJECT_ROOT/packages/shared"
+
+    if [ -f "$DB_PATH" ]; then
+        print_status "info" "Database already exists"
+        return 0
+    fi
+
+    print_status "info" "Creating SQLite database..."
+    pnpm exec prisma db push --skip-generate
+
+    if [ -f "$DB_PATH" ]; then
+        print_status "ok" "Database created successfully"
+        return 0
+    else
+        print_status "error" "Failed to create database"
+        return 1
+    fi
+}
+
+reset_db() {
+    print_section "Resetting Database"
+
+    if [ -f "$DB_PATH" ]; then
+        if confirm "This will delete all data. Continue?"; then
+            rm -f "$DB_PATH"
+            print_status "ok" "Database deleted"
+            init_db
+        else
+            print_status "info" "Cancelled"
+        fi
+    else
+        print_status "info" "No database to reset"
+        init_db
+    fi
+}
+
+# =============================================================================
+# Check Functions
+# =============================================================================
 
 check_port() {
     local port=$1
@@ -148,42 +171,6 @@ is_service_running() {
 # Service Management
 # =============================================================================
 
-start_db() {
-    print_section "Starting Database"
-
-    if ! check_docker; then
-        return 1
-    fi
-
-    local status=$(docker inspect -f '{{.State.Status}}' "$DB_CONTAINER" 2>/dev/null || echo "not_found")
-
-    if [ "$status" = "running" ]; then
-        print_status "info" "PostgreSQL container is already running"
-    elif [ "$status" = "not_found" ]; then
-        print_status "info" "Starting PostgreSQL container..."
-        docker compose up -d db
-        print_status "info" "Waiting for PostgreSQL to be healthy..."
-        sleep 3
-    else
-        print_status "info" "Starting stopped container..."
-        docker start "$DB_CONTAINER"
-        sleep 2
-    fi
-
-    # Wait for healthy status
-    local attempts=0
-    while [ $attempts -lt 30 ]; do
-        if check_db_container; then
-            return 0
-        fi
-        sleep 1
-        ((attempts++))
-    done
-
-    print_status "error" "PostgreSQL failed to become healthy"
-    return 1
-}
-
 kill_port() {
     local port=$1
     local pids=$(lsof -ti:$port 2>/dev/null)
@@ -196,39 +183,45 @@ kill_port() {
 start_mcp_server() {
     print_section "Starting MCP Server"
 
+    # Ensure database exists
+    if ! check_db; then
+        init_db || return 1
+    fi
+
     # Check if already running
     if is_service_running "$PID_MCP"; then
         print_status "info" "MCP Server is already running (PID: $(cat $PID_MCP))"
         return 0
     fi
 
-    # Check port
-    if ! check_port $PORT_WEBSOCKET "WebSocket"; then
-        if confirm "Kill existing process on port $PORT_WEBSOCKET?"; then
-            kill_port $PORT_WEBSOCKET
-            print_status "ok" "Port $PORT_WEBSOCKET freed"
-        else
-            print_status "error" "Cannot start MCP Server - port in use"
-            return 1
-        fi
-    fi
-
+    # Note: WebSocket port auto-increments if busy (3002-3011)
     print_status "info" "Starting MCP Server..."
 
-    cd "$(dirname "$0")"
-    nohup pnpm dev:mcp > "$LOG_MCP" 2>&1 &
+    cd "$PROJECT_ROOT"
+    DATABASE_URL="$DATABASE_URL" nohup pnpm dev:mcp > "$LOG_MCP" 2>&1 &
     local pid=$!
     echo $pid > "$PID_MCP"
 
-    # Wait for WebSocket to be ready
+    # Wait for server to be ready
     sleep 2
-    if lsof -i:$PORT_WEBSOCKET &>/dev/null; then
-        print_status "ok" "MCP Server started (PID: $pid)"
-        print_status "info" "  - stdio: MCP protocol"
-        print_status "info" "  - WebSocket: port $PORT_WEBSOCKET"
+
+    # Check if process is still running
+    if ps -p "$pid" &>/dev/null; then
+        # Find which port it's using
+        local ws_port=$(lsof -p $pid -i -P 2>/dev/null | grep LISTEN | awk '{print $9}' | cut -d: -f2 | head -1)
+        if [ -n "$ws_port" ]; then
+            print_status "ok" "MCP Server started (PID: $pid)"
+            print_status "info" "  - stdio: MCP protocol"
+            print_status "info" "  - WebSocket: port $ws_port"
+        else
+            print_status "ok" "MCP Server started (PID: $pid)"
+            print_status "info" "  - stdio: MCP protocol"
+            print_status "warn" "  - WebSocket: port detection failed (check logs)"
+        fi
         return 0
     else
         print_status "error" "MCP Server failed to start"
+        print_status "info" "Check logs: $LOG_MCP"
         return 1
     fi
 }
@@ -255,8 +248,8 @@ start_webui() {
 
     print_status "info" "Starting Web UI..."
 
-    cd "$(dirname "$0")"
-    nohup pnpm dev:ui > "$LOG_WEBUI" 2>&1 &
+    cd "$PROJECT_ROOT"
+    DATABASE_URL="$DATABASE_URL" nohup pnpm dev:ui > "$LOG_WEBUI" 2>&1 &
     local pid=$!
     echo $pid > "$PID_WEBUI"
 
@@ -268,6 +261,7 @@ start_webui() {
         return 0
     else
         print_status "error" "Web UI failed to start"
+        print_status "info" "Check logs: $LOG_WEBUI"
         return 1
     fi
 }
@@ -309,11 +303,13 @@ show_status() {
     print_section "Service Status"
 
     # Database
-    check_db_container
+    check_db
 
     # MCP Server
     if is_service_running "$PID_MCP"; then
-        print_status "ok" "MCP Server is running (PID: $(cat $PID_MCP))"
+        local pid=$(cat $PID_MCP)
+        local ws_port=$(lsof -p $pid -i -P 2>/dev/null | grep LISTEN | awk '{print $9}' | cut -d: -f2 | head -1)
+        print_status "ok" "MCP Server is running (PID: $pid, WebSocket: ${ws_port:-unknown})"
     elif lsof -i:$PORT_WEBSOCKET &>/dev/null; then
         print_status "warn" "Something is running on port $PORT_WEBSOCKET (not managed by this script)"
     else
@@ -384,9 +380,10 @@ show_menu() {
     echo "  4) Show status"
     echo "  5) View logs"
     echo "  6) Open Web UI in browser"
-    echo "  7) Exit"
+    echo "  7) Reset database"
+    echo "  8) Exit"
     echo ""
-    echo -n "  Choice [1-7]: "
+    echo -n "  Choice [1-8]: "
     read -r choice
 
     case $choice in
@@ -404,7 +401,8 @@ show_menu() {
                 print_status "info" "Open http://localhost:$PORT_WEBUI in your browser"
             fi
             ;;
-        7)
+        7) reset_db ;;
+        8)
             echo -e "\n${GREEN}Goodbye!${NC}\n"
             exit 0
             ;;
@@ -416,13 +414,18 @@ show_menu() {
 
 start_all() {
     ensure_dirs
-    start_db || return 1
+
+    # Ensure database exists
+    if ! check_db; then
+        init_db || return 1
+    fi
+
     start_mcp_server || return 1
     start_webui || return 1
 
     print_section "All Services Started"
-    print_status "ok" "PostgreSQL: localhost:$PORT_DB"
-    print_status "ok" "MCP Server WebSocket: localhost:$PORT_WEBSOCKET"
+    print_status "ok" "SQLite Database: $DB_PATH"
+    print_status "ok" "MCP Server: running (WebSocket auto-assigned)"
     print_status "ok" "Web UI: http://localhost:$PORT_WEBUI"
     echo ""
     print_status "info" "Use './dev.sh logs' to view logs"
@@ -454,6 +457,12 @@ main() {
             ;;
         logs)
             show_logs
+            ;;
+        db:reset)
+            reset_db
+            ;;
+        db:init)
+            init_db
             ;;
         *)
             # Interactive mode
