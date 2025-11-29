@@ -1,13 +1,30 @@
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import { prisma } from '@/lib/prisma'
-import type { WorkflowStatus } from '@prisma/client'
+import { WorkflowStatus } from '@prisma/client'
 
 export const dynamic = 'force-dynamic'
+
+// Zod schema for status validation
+const statusSchema = z
+  .enum(['all', 'IN_PROGRESS', 'COMPLETED', 'FAILED'])
+  .optional()
+  .default('all')
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
-    const status = searchParams.get('status')
+    const rawStatus = searchParams.get('status')
+
+    // Validate status parameter
+    const parseResult = statusSchema.safeParse(rawStatus ?? undefined)
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { error: 'Invalid status parameter' },
+        { status: 400 }
+      )
+    }
+    const status = parseResult.data
 
     const where =
       status && status !== 'all'
