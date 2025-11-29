@@ -163,6 +163,22 @@ export async function handleCompleteTask(
     )
   }
 
+  // Check if this task has any subtasks still in progress
+  const incompleteSubtasks = await prisma.task.findMany({
+    where: {
+      parentTaskId: validated.task_id,
+      status: TaskStatus.IN_PROGRESS,
+    },
+    select: { id: true, name: true },
+  })
+
+  if (incompleteSubtasks.length > 0) {
+    const subtaskNames = incompleteSubtasks.map((t) => t.name).join(', ')
+    throw new ValidationError(
+      `Cannot complete task: ${incompleteSubtasks.length} subtask(s) still in progress (${subtaskNames})`
+    )
+  }
+
   // Calculate completion time
   const completedAt = new Date()
   const durationMs = completedAt.getTime() - task.startedAt.getTime()
@@ -263,8 +279,23 @@ export async function handleCompleteTask(
   }
 }
 
+// Workflow status constants
+const WorkflowStatus = {
+  IN_PROGRESS: 'IN_PROGRESS',
+  COMPLETED: 'COMPLETED',
+  PARTIAL_SUCCESS: 'PARTIAL_SUCCESS',
+  FAILED: 'FAILED',
+} as const
+
 /**
  * Check if all tasks in a workflow are complete and update workflow status.
+ *
+ * Status logic:
+ * - If ANY task is IN_PROGRESS → workflow stays IN_PROGRESS
+ * - If ANY task is FAILED → workflow is FAILED
+ * - If ANY task is PARTIAL_SUCCESS (and none FAILED) → workflow is PARTIAL_SUCCESS
+ * - If ALL tasks are SUCCESS → workflow is COMPLETED
+ *
  * Returns the updated workflow if status changed, null otherwise.
  */
 async function checkAndUpdateWorkflowStatus(
@@ -275,24 +306,49 @@ async function checkAndUpdateWorkflowStatus(
     select: { status: true },
   })
 
-  // Check if all tasks are complete (not IN_PROGRESS)
-  const allComplete = tasks.every(
-    (task) => task.status !== TaskStatus.IN_PROGRESS
-  )
-
-  if (allComplete && tasks.length > 0) {
-    // Check if any task failed
-    const anyFailed = tasks.some((task) => task.status === TaskStatus.FAILED)
-
-    const updatedWorkflow = await prisma.workflow.update({
-      where: { id: workflowId },
-      data: {
-        status: anyFailed ? 'FAILED' : 'COMPLETED',
-      },
-    })
-
-    return updatedWorkflow
+  if (tasks.length === 0) {
+    return null
   }
 
-  return null
+  // Check if any task is still in progress
+  const anyInProgress = tasks.some(
+    (task) => task.status === TaskStatus.IN_PROGRESS
+  )
+
+  if (anyInProgress) {
+    // Workflow stays IN_PROGRESS
+    return null
+  }
+
+  // All tasks are complete, determine final workflow status
+  const anyFailed = tasks.some((task) => task.status === TaskStatus.FAILED)
+  const anyPartialSuccess = tasks.some(
+    (task) => task.status === TaskStatus.PARTIAL_SUCCESS
+  )
+
+  let newStatus: string
+  if (anyFailed) {
+    newStatus = WorkflowStatus.FAILED
+  } else if (anyPartialSuccess) {
+    newStatus = WorkflowStatus.PARTIAL_SUCCESS
+  } else {
+    newStatus = WorkflowStatus.COMPLETED
+  }
+
+  // Only update if status actually changes
+  const currentWorkflow = await prisma.workflow.findUnique({
+    where: { id: workflowId },
+    select: { status: true },
+  })
+
+  if (currentWorkflow?.status === newStatus) {
+    return null
+  }
+
+  const updatedWorkflow = await prisma.workflow.update({
+    where: { id: workflowId },
+    data: { status: newStatus },
+  })
+
+  return updatedWorkflow
 }
