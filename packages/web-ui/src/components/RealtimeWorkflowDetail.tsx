@@ -39,14 +39,18 @@ function formatDuration(ms: number | null): string {
   return `${hours}h ${minutes % 60}m`
 }
 
-function formatDate(date: Date): string {
+function formatDate(date: Date | string): string {
+  const d = typeof date === 'string' ? new Date(date) : date
+  if (isNaN(d.getTime())) {
+    return 'Date invalide'
+  }
   return new Intl.DateTimeFormat('fr-FR', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
-  }).format(date)
+  }).format(d)
 }
 
 export function RealtimeWorkflowDetail({
