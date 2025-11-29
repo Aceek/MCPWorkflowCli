@@ -175,9 +175,14 @@ async function main(): Promise<void> {
   const server = createServer()
   const transport = new StdioServerTransport()
 
-  // Start WebSocket server for real-time UI updates
+  // Start WebSocket server for real-time UI updates (non-blocking)
   const wsServer = getWebSocketServer()
-  wsServer.start()
+  const wsPort = await wsServer.start()
+  if (wsPort) {
+    console.error(`[MCP] WebSocket available on port ${wsPort}`)
+  } else {
+    console.error('[MCP] WebSocket unavailable - real-time updates disabled')
+  }
 
   // Handle graceful shutdown
   const shutdown = async () => {

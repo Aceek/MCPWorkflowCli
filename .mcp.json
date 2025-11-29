@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "workflow-tracker": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["tsx", "packages/mcp-server/src/index.ts"],
+      "env": {
+        "DATABASE_PROVIDER": "postgresql",
+        "DATABASE_URL": "postgresql://mcp_user:mcp_password@localhost:5433/mcp_tracker?schema=public"
+      }
+    }
+  }
+}
