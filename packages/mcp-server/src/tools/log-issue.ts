@@ -7,6 +7,7 @@
 import { z } from 'zod'
 import { prisma } from '../db.js'
 import { IssueType } from '@prisma/client'
+import { emitIssueCreated } from '../websocket/index.js'
 import { NotFoundError } from '../utils/errors.js'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 
@@ -103,6 +104,9 @@ export async function handleLogIssue(args: unknown): Promise<CallToolResult> {
       requiresHumanReview: validated.requires_human_review ?? false,
     },
   })
+
+  // Emit WebSocket event for real-time UI update
+  emitIssueCreated(issue, validated.task_id, task.workflowId)
 
   return {
     content: [

@@ -13,6 +13,7 @@ import {
   verifyScope,
   type GitSnapshotData,
 } from '../utils/git-snapshot.js'
+import { emitTaskUpdated, emitWorkflowUpdated } from '../websocket/index.js'
 import { NotFoundError, ValidationError } from '../utils/errors.js'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 
@@ -207,9 +208,15 @@ export async function handleCompleteTask(
     },
   })
 
+  // Emit WebSocket event for real-time UI update
+  emitTaskUpdated(updatedTask, task.workflowId)
+
   // Check if workflow should be completed
   // (All tasks in workflow are complete)
-  await checkAndUpdateWorkflowStatus(task.workflowId)
+  const updatedWorkflow = await checkAndUpdateWorkflowStatus(task.workflowId)
+  if (updatedWorkflow) {
+    emitWorkflowUpdated(updatedWorkflow)
+  }
 
   return {
     content: [
@@ -240,10 +247,11 @@ export async function handleCompleteTask(
 
 /**
  * Check if all tasks in a workflow are complete and update workflow status.
+ * Returns the updated workflow if status changed, null otherwise.
  */
 async function checkAndUpdateWorkflowStatus(
   workflowId: string
-): Promise<void> {
+): Promise<Awaited<ReturnType<typeof prisma.workflow.update>> | null> {
   const tasks = await prisma.task.findMany({
     where: { workflowId },
     select: { status: true },
@@ -258,11 +266,15 @@ async function checkAndUpdateWorkflowStatus(
     // Check if any task failed
     const anyFailed = tasks.some((task) => task.status === TaskStatus.FAILED)
 
-    await prisma.workflow.update({
+    const updatedWorkflow = await prisma.workflow.update({
       where: { id: workflowId },
       data: {
         status: anyFailed ? 'FAILED' : 'COMPLETED',
       },
     })
+
+    return updatedWorkflow
   }
+
+  return null
 }

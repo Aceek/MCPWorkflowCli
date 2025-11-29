@@ -6,6 +6,8 @@
  * A Model Context Protocol server that provides observability
  * for agentic workflows. Captures intention, reasoning, and
  * code changes with automatic Git diff computation.
+ *
+ * Also runs a WebSocket server for real-time UI updates.
  */
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
@@ -36,6 +38,9 @@ import {
 
 // Import error types
 import { McpError, ValidationError, NotFoundError } from './utils/errors.js'
+
+// Import WebSocket server
+import { getWebSocketServer } from './websocket/index.js'
 
 const MCP_SERVER_NAME = 'mcp-workflow-tracker'
 const MCP_SERVER_VERSION = '1.0.0'
@@ -170,18 +175,21 @@ async function main(): Promise<void> {
   const server = createServer()
   const transport = new StdioServerTransport()
 
+  // Start WebSocket server for real-time UI updates
+  const wsServer = getWebSocketServer()
+  wsServer.start()
+
   // Handle graceful shutdown
-  process.on('SIGINT', async () => {
+  const shutdown = async () => {
+    await wsServer.stop()
     await server.close()
     process.exit(0)
-  })
+  }
 
-  process.on('SIGTERM', async () => {
-    await server.close()
-    process.exit(0)
-  })
+  process.on('SIGINT', shutdown)
+  process.on('SIGTERM', shutdown)
 
-  // Connect and start serving
+  // Connect and start serving MCP
   await server.connect(transport)
 
   // Log to stderr (stdout is reserved for MCP protocol)

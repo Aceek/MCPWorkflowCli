@@ -7,6 +7,7 @@
 import { z } from 'zod'
 import { prisma } from '../db.js'
 import { Prisma, WorkflowStatus } from '@prisma/client'
+import { emitWorkflowCreated } from '../websocket/index.js'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 
 // Zod schema for validation
@@ -71,6 +72,9 @@ export async function handleStartWorkflow(
       status: WorkflowStatus.IN_PROGRESS,
     },
   })
+
+  // Emit WebSocket event for real-time UI update
+  emitWorkflowCreated(workflow)
 
   return {
     content: [

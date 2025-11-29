@@ -22,10 +22,9 @@ export function RealtimeWorkflowList() {
   const searchParams = useSearchParams()
   const status = searchParams.get('status') || undefined
 
-  const { workflows, stats, isLoading, error, lastUpdate, refresh } =
+  const { workflows, stats, isLoading, error, lastUpdate, refresh, isConnected } =
     useRealtimeWorkflows({
       status,
-      pollInterval: 5000, // Poll every 5 seconds
     })
 
   if (error) {
@@ -59,11 +58,20 @@ export function RealtimeWorkflowList() {
         <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
           <span
             className={`inline-block h-2 w-2 rounded-full ${
-              isLoading ? 'animate-pulse bg-yellow-500' : 'bg-green-500'
+              isConnected
+                ? 'bg-green-500'
+                : isLoading
+                  ? 'animate-pulse bg-yellow-500'
+                  : 'bg-gray-400'
             }`}
+            title={isConnected ? 'Real-time connected' : 'Disconnected'}
           />
           <span>
-            {isLoading ? 'Updating...' : `Updated ${formatLastUpdate(lastUpdate)}`}
+            {isConnected
+              ? `Live${lastUpdate ? ` • ${formatLastUpdate(lastUpdate)}` : ''}`
+              : isLoading
+                ? 'Connecting...'
+                : 'Offline'}
           </span>
           <button
             onClick={refresh}

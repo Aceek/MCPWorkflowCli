@@ -8,6 +8,7 @@
 import { z } from 'zod'
 import { prisma } from '../db.js'
 import { Prisma } from '@prisma/client'
+import { emitMilestoneCreated } from '../websocket/index.js'
 import { NotFoundError } from '../utils/errors.js'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 
@@ -76,6 +77,9 @@ export async function handleLogMilestone(
         : Prisma.JsonNull,
     },
   })
+
+  // Emit WebSocket event for real-time UI update
+  emitMilestoneCreated(milestone, validated.task_id, task.workflowId)
 
   return {
     content: [

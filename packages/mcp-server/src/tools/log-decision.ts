@@ -7,6 +7,7 @@
 import { z } from 'zod'
 import { prisma } from '../db.js'
 import { DecisionCategory } from '@prisma/client'
+import { emitDecisionCreated } from '../websocket/index.js'
 import { NotFoundError } from '../utils/errors.js'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 
@@ -120,6 +121,9 @@ export async function handleLogDecision(
       tradeOffs: validated.trade_offs,
     },
   })
+
+  // Emit WebSocket event for real-time UI update
+  emitDecisionCreated(decision, validated.task_id, task.workflowId)
 
   return {
     content: [

@@ -9,6 +9,7 @@ import { z } from 'zod'
 import { prisma } from '../db.js'
 import { Prisma, TaskStatus } from '@prisma/client'
 import { createGitSnapshot } from '../utils/git-snapshot.js'
+import { emitTaskCreated } from '../websocket/index.js'
 import { NotFoundError } from '../utils/errors.js'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 
@@ -99,6 +100,9 @@ export async function handleStartTask(args: unknown): Promise<CallToolResult> {
       status: TaskStatus.IN_PROGRESS,
     },
   })
+
+  // Emit WebSocket event for real-time UI update
+  emitTaskCreated(task, validated.workflow_id)
 
   return {
     content: [
