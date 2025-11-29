@@ -1,0 +1,28 @@
+{
+  "name": "mcp-workflow-tracker",
+  "version": "1.0.0",
+  "description": "Observability system for agentic workflows capturing intention, reasoning and code modifications",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev:mcp": "pnpm --filter @mcp-tracker/mcp-server dev",
+    "dev:ui": "pnpm --filter @mcp-tracker/web-ui dev",
+    "build:all": "pnpm --filter @mcp-tracker/shared build && pnpm --filter @mcp-tracker/mcp-server build",
+    "db:migrate": "pnpm --filter @mcp-tracker/shared prisma:migrate",
+    "db:generate": "pnpm --filter @mcp-tracker/shared prisma:generate",
+    "db:studio": "pnpm --filter @mcp-tracker/shared prisma:studio"
+  },
+  "keywords": [
+    "mcp",
+    "workflow",
+    "observability",
+    "agents",
+    "claude"
+  ],
+  "author": "",
+  "license": "MIT",
+  "packageManager": "pnpm@10.24.0",
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

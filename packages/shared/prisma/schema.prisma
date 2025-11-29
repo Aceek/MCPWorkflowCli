@@ -1,0 +1,174 @@
+// MCP Workflow Tracker - Prisma Schema
+// Source: packages/shared/prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// ENUMS (Type Safety)
+// ============================================
+
+enum WorkflowStatus {
+  IN_PROGRESS
+  COMPLETED
+  FAILED
+}
+
+enum TaskStatus {
+  IN_PROGRESS
+  SUCCESS
+  PARTIAL_SUCCESS
+  FAILED
+}
+
+enum DecisionCategory {
+  ARCHITECTURE
+  LIBRARY_CHOICE
+  TRADE_OFF
+  WORKAROUND
+  OTHER
+}
+
+enum IssueType {
+  DOC_GAP
+  BUG
+  DEPENDENCY_CONFLICT
+  UNCLEAR_REQUIREMENT
+  OTHER
+}
+
+enum TestsStatus {
+  PASSED
+  FAILED
+  NOT_RUN
+}
+
+// ============================================
+// MODELS
+// ============================================
+
+model Workflow {
+  id          String         @id @default(cuid())
+  name        String
+  description String?        @db.Text
+  plan        Json?          // Structure libre (array d'étapes)
+  status      WorkflowStatus @default(IN_PROGRESS)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  tasks Task[]
+
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Task {
+  id           String     @id @default(cuid())
+  workflowId   String
+  parentTaskId String?
+  name         String
+  goal         String     @db.Text
+  status       TaskStatus @default(IN_PROGRESS)
+
+  // Scope (indication de zone, ex: ["auth", "api"])
+  areas String[]
+
+  // Snapshot data (Git ou Checksum)
+  snapshotId   String?
+  snapshotType String? // "git" ou "checksum"
+  snapshotData Json? // { gitHash: "abc123" } ou { checksums: {...} }
+
+  // Timing (calculé automatiquement par le MCP)
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  durationMs  Int?
+
+  // Outcome (fourni par l'agent dans complete_task)
+  summary            String?  @db.Text
+  achievements       String[] // Peut être vide []
+  limitations        String[] // Peut être vide []
+  manualReviewNeeded Boolean  @default(false)
+  manualReviewReason String?  @db.Text
+  nextSteps          String[]
+
+  // Metadata (fourni par l'agent)
+  packagesAdded    String[]
+  packagesRemoved  String[]
+  commandsExecuted String[]
+  testsStatus      TestsStatus?
+
+  // Files changed (calculé par le MCP via Git diff)
+  filesAdded    String[]
+  filesModified String[]
+  filesDeleted  String[]
+
+  // Verification (calculé par le MCP)
+  scopeMatch      Boolean?
+  unexpectedFiles String[]
+  warnings        String[]
+
+  // Relations
+  workflow   Workflow    @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  parentTask Task?       @relation("TaskHierarchy", fields: [parentTaskId], references: [id])
+  subtasks   Task[]      @relation("TaskHierarchy")
+  decisions  Decision[]
+  issues     Issue[]
+  milestones Milestone[]
+
+  @@index([workflowId])
+  @@index([parentTaskId])
+  @@index([status])
+  @@index([startedAt])
+}
+
+model Decision {
+  id                String           @id @default(cuid())
+  taskId            String
+  category          DecisionCategory
+  question          String           @db.Text
+  optionsConsidered String[]
+  chosen            String
+  reasoning         String           @db.Text
+  tradeOffs         String?          @db.Text
+  createdAt         DateTime         @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([createdAt])
+}
+
+model Issue {
+  id                  String    @id @default(cuid())
+  taskId              String
+  type                IssueType
+  description         String    @db.Text
+  resolution          String    @db.Text
+  requiresHumanReview Boolean   @default(false)
+  createdAt           DateTime  @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([createdAt])
+}
+
+model Milestone {
+  id        String   @id @default(cuid())
+  taskId    String
+  message   String
+  progress  Int? // 0-100 (optionnel)
+  metadata  Json? // Structure libre
+  createdAt DateTime @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([createdAt])
+}
