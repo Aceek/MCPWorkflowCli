@@ -8,7 +8,7 @@
 import { z } from 'zod'
 import { prisma } from '../db.js'
 import { createGitSnapshot } from '../utils/git-snapshot.js'
-import { emitTaskCreated } from '../websocket/index.js'
+import { emitTaskCreated, emitWorkflowUpdated } from '../websocket/index.js'
 import { NotFoundError } from '../utils/errors.js'
 import { toJsonArray, toJsonObject } from '../utils/json-fields.js'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
@@ -18,6 +18,12 @@ const TaskStatus = {
   IN_PROGRESS: 'IN_PROGRESS',
   SUCCESS: 'SUCCESS',
   PARTIAL_SUCCESS: 'PARTIAL_SUCCESS',
+  FAILED: 'FAILED',
+} as const
+
+const WorkflowStatus = {
+  IN_PROGRESS: 'IN_PROGRESS',
+  COMPLETED: 'COMPLETED',
   FAILED: 'FAILED',
 } as const
 
@@ -111,6 +117,16 @@ export async function handleStartTask(args: unknown): Promise<CallToolResult> {
 
   // Emit WebSocket event for real-time UI update
   emitTaskCreated(task, validated.workflow_id)
+
+  // Ensure workflow is IN_PROGRESS when a new task is started
+  // (fixes bug where workflow was COMPLETED but new task is started)
+  if (workflow.status !== WorkflowStatus.IN_PROGRESS) {
+    const updatedWorkflow = await prisma.workflow.update({
+      where: { id: validated.workflow_id },
+      data: { status: WorkflowStatus.IN_PROGRESS },
+    })
+    emitWorkflowUpdated(updatedWorkflow)
+  }
 
   return {
     content: [
