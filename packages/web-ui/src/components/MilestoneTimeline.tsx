@@ -9,12 +9,16 @@ interface MilestoneTimelineProps {
   milestones: Milestone[]
 }
 
-function formatTime(date: Date): string {
+function formatTime(date: Date | string): string {
+  const d = typeof date === 'string' ? new Date(date) : date
+  if (isNaN(d.getTime())) {
+    return '--:--:--'
+  }
   return new Intl.DateTimeFormat('fr-FR', {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
-  }).format(date)
+  }).format(d)
 }
 
 export function MilestoneTimeline({ milestones }: MilestoneTimelineProps) {

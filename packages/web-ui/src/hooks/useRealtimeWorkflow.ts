@@ -87,6 +87,10 @@ export function useRealtimeWorkflow(options: UseRealtimeWorkflowOptions) {
 
       setWorkflow((prev) => {
         if (!prev) return prev
+        // Check if task already exists (avoid duplicates from SSR + WebSocket race)
+        if (prev.tasks.some((t) => t.id === event.task.id)) {
+          return prev
+        }
         // Add new task with empty relations
         const newTask: TaskWithRelations = {
           ...event.task,
@@ -127,11 +131,14 @@ export function useRealtimeWorkflow(options: UseRealtimeWorkflowOptions) {
         if (!prev) return prev
         return {
           ...prev,
-          tasks: prev.tasks.map((task) =>
-            task.id === event.taskId
-              ? { ...task, decisions: [...task.decisions, event.decision] }
-              : task
-          ),
+          tasks: prev.tasks.map((task) => {
+            if (task.id !== event.taskId) return task
+            // Check if decision already exists
+            if (task.decisions.some((d) => d.id === event.decision.id)) {
+              return task
+            }
+            return { ...task, decisions: [...task.decisions, event.decision] }
+          }),
         }
       })
       setLastUpdate(new Date())
@@ -145,11 +152,14 @@ export function useRealtimeWorkflow(options: UseRealtimeWorkflowOptions) {
         if (!prev) return prev
         return {
           ...prev,
-          tasks: prev.tasks.map((task) =>
-            task.id === event.taskId
-              ? { ...task, issues: [...task.issues, event.issue] }
-              : task
-          ),
+          tasks: prev.tasks.map((task) => {
+            if (task.id !== event.taskId) return task
+            // Check if issue already exists
+            if (task.issues.some((i) => i.id === event.issue.id)) {
+              return task
+            }
+            return { ...task, issues: [...task.issues, event.issue] }
+          }),
         }
       })
       setLastUpdate(new Date())
@@ -163,11 +173,14 @@ export function useRealtimeWorkflow(options: UseRealtimeWorkflowOptions) {
         if (!prev) return prev
         return {
           ...prev,
-          tasks: prev.tasks.map((task) =>
-            task.id === event.taskId
-              ? { ...task, milestones: [...task.milestones, event.milestone] }
-              : task
-          ),
+          tasks: prev.tasks.map((task) => {
+            if (task.id !== event.taskId) return task
+            // Check if milestone already exists
+            if (task.milestones.some((m) => m.id === event.milestone.id)) {
+              return task
+            }
+            return { ...task, milestones: [...task.milestones, event.milestone] }
+          }),
         }
       })
       setLastUpdate(new Date())
