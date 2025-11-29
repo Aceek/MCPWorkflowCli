@@ -1,57 +1,52 @@
-interface SkeletonProps {
-  className?: string
-}
+'use client'
 
-export function Skeleton({ className = '' }: SkeletonProps) {
-  return (
-    <div
-      className={`animate-pulse rounded bg-gray-200 dark:bg-gray-700 ${className}`}
-    />
-  )
-}
+import { Skeleton as BaseSkeleton } from '@/components/ui/skeleton'
+import { Card } from '@/components/ui/card'
+import { Separator } from '@/components/ui/separator'
+import { cn } from '@/lib/utils'
 
 export function WorkflowCardSkeleton() {
   return (
-    <div className="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <Skeleton className="h-6 w-48" />
-          <Skeleton className="mt-2 h-4 w-72" />
+    <Card className="p-6">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex-1 space-y-2">
+          <BaseSkeleton className="h-6 w-48" />
+          <BaseSkeleton className="h-4 w-72" />
         </div>
-        <Skeleton className="h-6 w-20 rounded-full" />
+        <BaseSkeleton className="h-6 w-24 rounded-[var(--radius-full)]" />
       </div>
       <div className="mt-4 flex items-center gap-4">
-        <Skeleton className="h-4 w-24" />
-        <Skeleton className="h-4 w-32" />
+        <BaseSkeleton className="h-4 w-20" />
+        <BaseSkeleton className="h-4 w-32" />
       </div>
-    </div>
+    </Card>
   )
 }
 
 export function WorkflowDetailSkeleton() {
   return (
-    <div>
+    <div className="animate-fade-in">
       {/* Breadcrumb */}
-      <Skeleton className="mb-6 h-4 w-32" />
+      <BaseSkeleton className="mb-6 h-4 w-32" />
 
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-start justify-between">
-          <div>
-            <Skeleton className="h-9 w-64" />
-            <Skeleton className="mt-2 h-5 w-96" />
+          <div className="space-y-2">
+            <BaseSkeleton className="h-9 w-64" />
+            <BaseSkeleton className="h-5 w-96" />
           </div>
-          <Skeleton className="h-6 w-24 rounded-full" />
+          <BaseSkeleton className="h-6 w-24 rounded-[var(--radius-full)]" />
         </div>
         <div className="mt-4 flex items-center gap-6">
-          <Skeleton className="h-4 w-40" />
-          <Skeleton className="h-4 w-24" />
+          <BaseSkeleton className="h-4 w-40" />
+          <BaseSkeleton className="h-4 w-24" />
         </div>
       </div>
 
       {/* Tasks */}
       <div>
-        <Skeleton className="mb-4 h-7 w-20" />
+        <BaseSkeleton className="mb-4 h-7 w-20" />
         <div className="space-y-4">
           <TaskCardSkeleton />
           <TaskCardSkeleton />
@@ -63,41 +58,47 @@ export function WorkflowDetailSkeleton() {
 
 export function TaskCardSkeleton() {
   return (
-    <div className="rounded-lg border border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-800">
-      <div className="border-b border-gray-200 p-4 dark:border-gray-700">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <Skeleton className="h-5 w-40" />
-            <Skeleton className="mt-2 h-4 w-64" />
+    <Card>
+      <div className="p-4 pb-3 space-y-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 space-y-2">
+            <BaseSkeleton className="h-5 w-40" />
+            <BaseSkeleton className="h-4 w-64" />
           </div>
-          <Skeleton className="h-6 w-20 rounded-full" />
+          <BaseSkeleton className="h-6 w-20 rounded-[var(--radius-full)]" />
         </div>
-        <div className="mt-3 flex items-center gap-4">
-          <Skeleton className="h-3 w-24" />
-          <Skeleton className="h-3 w-32" />
+        <div className="flex items-center gap-4">
+          <BaseSkeleton className="h-3 w-20" />
+          <BaseSkeleton className="h-3 w-28" />
         </div>
       </div>
-      <div className="p-4">
-        <Skeleton className="mb-2 h-3 w-16" />
-        <Skeleton className="h-4 w-full" />
-        <Skeleton className="mt-1 h-4 w-3/4" />
+      <Separator />
+      <div className="p-4 space-y-2">
+        <BaseSkeleton className="h-3 w-16" />
+        <BaseSkeleton className="h-4 w-full" />
+        <BaseSkeleton className="h-4 w-3/4" />
       </div>
-    </div>
+    </Card>
   )
 }
 
 export function StatsSkeleton() {
   return (
-    <div className="grid gap-4 sm:grid-cols-3">
-      {[1, 2, 3].map((i) => (
-        <div
-          key={i}
-          className="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800"
-        >
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="mt-2 h-8 w-16" />
-        </div>
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {[1, 2, 3, 4].map((i) => (
+        <Card key={i} className="p-4">
+          <div className="flex items-center gap-4">
+            <BaseSkeleton className="h-10 w-10 rounded-[var(--radius-lg)]" />
+            <div className="space-y-2">
+              <BaseSkeleton className="h-4 w-24" />
+              <BaseSkeleton className="h-7 w-12" />
+            </div>
+          </div>
+        </Card>
       ))}
     </div>
   )
 }
+
+// Re-export the base Skeleton for direct use
+export { BaseSkeleton as Skeleton }

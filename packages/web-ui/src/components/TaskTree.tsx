@@ -1,5 +1,9 @@
+'use client'
+
 import type { Task, Decision, Issue, Milestone } from '@prisma/client'
+import { motion } from 'framer-motion'
 import { TaskCard } from './TaskCard'
+import { cn } from '@/lib/utils'
 
 type TaskWithRelations = Task & {
   decisions: Decision[]
@@ -25,7 +29,19 @@ export function TaskTree({
   const subtasks = allTasks.filter((t) => t.parentTaskId === task.id)
 
   return (
-    <div className={depth > 0 ? 'ml-6 border-l-2 border-gray-200 pl-4 dark:border-gray-700' : ''}>
+    <motion.div
+      initial={{ opacity: 0, x: depth > 0 ? -10 : 0 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.3, delay: depth * 0.1 }}
+      className={cn(
+        depth > 0 && 'ml-6 pl-4 border-l-2 border-[hsl(var(--border))]'
+      )}
+    >
+      {/* Connector dot for subtasks */}
+      {depth > 0 && (
+        <div className="absolute -left-[9px] top-6 h-3 w-3 rounded-full bg-[hsl(var(--background))] border-2 border-[hsl(var(--border))]" />
+      )}
+
       <TaskCard
         task={task}
         formatDuration={formatDuration}
@@ -34,8 +50,8 @@ export function TaskTree({
 
       {/* Render subtasks recursively */}
       {subtasks.length > 0 && (
-        <div className="mt-3 space-y-3">
-          {subtasks.map((subtask) => (
+        <div className="mt-3 space-y-3 relative">
+          {subtasks.map((subtask, index) => (
             <TaskTree
               key={subtask.id}
               task={subtask}
@@ -46,6 +62,6 @@ export function TaskTree({
           ))}
         </div>
       )}
-    </div>
+    </motion.div>
   )
 }

@@ -1,4 +1,9 @@
+'use client'
+
 import type { Milestone } from '@prisma/client'
+import { motion } from 'framer-motion'
+import { Progress } from '@/components/ui/progress'
+import { cn } from '@/lib/utils'
 
 interface MilestoneTimelineProps {
   milestones: Milestone[]
@@ -14,48 +19,56 @@ function formatTime(date: Date): string {
 
 export function MilestoneTimeline({ milestones }: MilestoneTimelineProps) {
   return (
-    <div className="relative">
-      <div className="absolute left-2 top-0 h-full w-0.5 bg-gray-200 dark:bg-gray-700" />
+    <div className="relative pl-6">
+      {/* Timeline line */}
+      <div className="timeline-connector" />
 
-      <div className="space-y-3">
-        {milestones.map((milestone, index) => (
-          <div key={milestone.id} className="relative flex items-start gap-3">
-            {/* Timeline dot */}
-            <div
-              className={`relative z-10 mt-1.5 h-4 w-4 rounded-full border-2 ${
-                index === milestones.length - 1
-                  ? 'border-blue-500 bg-blue-500'
-                  : 'border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-800'
-              }`}
-            />
+      <div className="space-y-4">
+        {milestones.map((milestone, index) => {
+          const isLast = index === milestones.length - 1
 
-            {/* Content */}
-            <div className="flex-1 pb-2">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-gray-900 dark:text-white">
-                  {milestone.message}
-                </p>
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  {formatTime(milestone.createdAt)}
-                </span>
-              </div>
+          return (
+            <motion.div
+              key={milestone.id}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3, delay: index * 0.05 }}
+              className="relative"
+            >
+              {/* Timeline dot */}
+              <div
+                className={cn(
+                  'timeline-dot absolute -left-6',
+                  isLast && 'active'
+                )}
+              />
 
-              {milestone.progress !== null && (
-                <div className="mt-1 flex items-center gap-2">
-                  <div className="h-1.5 flex-1 rounded-full bg-gray-200 dark:bg-gray-700">
-                    <div
-                      className="h-1.5 rounded-full bg-blue-500"
-                      style={{ width: `${milestone.progress}%` }}
-                    />
-                  </div>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                    {milestone.progress}%
+              {/* Content */}
+              <div className="pb-1">
+                <div className="flex items-center justify-between gap-4">
+                  <p className="text-sm text-[hsl(var(--foreground))]">
+                    {milestone.message}
+                  </p>
+                  <span className="shrink-0 text-xs text-[hsl(var(--muted-foreground))]">
+                    {formatTime(milestone.createdAt)}
                   </span>
                 </div>
-              )}
-            </div>
-          </div>
-        ))}
+
+                {milestone.progress !== null && (
+                  <div className="mt-2">
+                    <Progress
+                      value={milestone.progress}
+                      max={100}
+                      showLabel
+                      variant="gradient"
+                      size="sm"
+                    />
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )
+        })}
       </div>
     </div>
   )

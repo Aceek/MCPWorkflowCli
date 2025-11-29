@@ -1,6 +1,12 @@
+'use client'
+
 import Link from 'next/link'
 import type { Workflow } from '@prisma/client'
+import { motion } from 'framer-motion'
+import { Calendar, ListTodo, ChevronRight } from 'lucide-react'
+import { Card } from '@/components/ui/card'
 import { StatusBadge } from './StatusBadge'
+import { cn } from '@/lib/utils'
 
 interface WorkflowCardProps {
   workflow: Workflow & {
@@ -8,6 +14,7 @@ interface WorkflowCardProps {
       tasks: number
     }
   }
+  index?: number
 }
 
 function formatDate(date: Date): string {
@@ -20,60 +27,62 @@ function formatDate(date: Date): string {
   }).format(date)
 }
 
-export function WorkflowCard({ workflow }: WorkflowCardProps) {
+export function WorkflowCard({ workflow, index = 0 }: WorkflowCardProps) {
   return (
-    <Link
-      href={`/workflow/${workflow.id}`}
-      className="block rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md dark:border-gray-700 dark:bg-gray-800"
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{
+        duration: 0.3,
+        delay: index * 0.05,
+        ease: [0, 0, 0.2, 1],
+      }}
     >
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-            {workflow.name}
-          </h2>
-          {workflow.description && (
-            <p className="mt-1 line-clamp-2 text-sm text-gray-600 dark:text-gray-400">
-              {workflow.description}
-            </p>
-          )}
-        </div>
-        <StatusBadge status={workflow.status} />
-      </div>
+      <Link href={`/workflow/${workflow.id}`} className="block group">
+        <Card
+          variant="interactive"
+          className="relative overflow-hidden p-6 h-full"
+        >
+          {/* Gradient accent on hover */}
+          <div className="absolute inset-0 bg-gradient-to-br from-[hsl(var(--primary)/0.03)] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-      <div className="mt-4 flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
-        <span className="flex items-center gap-1">
-          <svg
-            className="h-4 w-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-            />
-          </svg>
-          {workflow._count.tasks} task{workflow._count.tasks !== 1 ? 's' : ''}
-        </span>
-        <span className="flex items-center gap-1">
-          <svg
-            className="h-4 w-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          {formatDate(workflow.createdAt)}
-        </span>
-      </div>
-    </Link>
+          <div className="relative">
+            {/* Header */}
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <h2 className="text-lg font-semibold text-[hsl(var(--foreground))] group-hover:text-[hsl(var(--primary))] transition-colors truncate">
+                  {workflow.name}
+                </h2>
+                {workflow.description && (
+                  <p className="mt-1.5 text-sm text-[hsl(var(--muted-foreground))] line-clamp-2">
+                    {workflow.description}
+                  </p>
+                )}
+              </div>
+              <StatusBadge status={workflow.status} size="sm" />
+            </div>
+
+            {/* Meta info */}
+            <div className="mt-4 flex items-center gap-4 text-sm text-[hsl(var(--muted-foreground))]">
+              <span className="flex items-center gap-1.5">
+                <ListTodo className="h-4 w-4" />
+                <span>
+                  {workflow._count.tasks} task{workflow._count.tasks !== 1 ? 's' : ''}
+                </span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Calendar className="h-4 w-4" />
+                <span>{formatDate(workflow.createdAt)}</span>
+              </span>
+            </div>
+
+            {/* Arrow indicator */}
+            <div className="absolute right-0 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all group-hover:translate-x-1">
+              <ChevronRight className="h-5 w-5 text-[hsl(var(--muted-foreground))]" />
+            </div>
+          </div>
+        </Card>
+      </Link>
+    </motion.div>
   )
 }

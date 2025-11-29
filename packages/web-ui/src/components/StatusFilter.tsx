@@ -1,7 +1,8 @@
 'use client'
 
 import { useRouter, useSearchParams } from 'next/navigation'
-import type { WorkflowStatus } from '@prisma/client'
+import { motion } from 'framer-motion'
+import { cn } from '@/lib/utils'
 
 const statuses: { value: string; label: string }[] = [
   { value: 'all', label: 'All' },
@@ -26,18 +27,30 @@ export function StatusFilter() {
   }
 
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap gap-2 p-1 rounded-[var(--radius-lg)] bg-[hsl(var(--muted))]">
       {statuses.map((status) => (
         <button
           key={status.value}
           onClick={() => handleStatusChange(status.value)}
-          className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+          className={cn(
+            'relative rounded-[var(--radius)] px-4 py-1.5 text-sm font-medium transition-colors duration-[var(--transition-base)]',
             currentStatus === status.value
-              ? 'bg-blue-600 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
-          }`}
+              ? 'text-[hsl(var(--primary-foreground))]'
+              : 'text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]'
+          )}
         >
-          {status.label}
+          {currentStatus === status.value && (
+            <motion.div
+              layoutId="activeTab"
+              className="absolute inset-0 rounded-[var(--radius)] bg-[hsl(var(--primary))] shadow-[var(--shadow-sm)]"
+              transition={{
+                type: 'spring',
+                bounce: 0.2,
+                duration: 0.6,
+              }}
+            />
+          )}
+          <span className="relative z-10">{status.label}</span>
         </button>
       ))}
     </div>

@@ -1,4 +1,16 @@
-import type { WorkflowStatus } from '@prisma/client'
+'use client'
+
+import { motion } from 'framer-motion'
+import {
+  LayoutGrid,
+  Loader2,
+  CheckCircle2,
+  XCircle,
+  TrendingUp,
+} from 'lucide-react'
+import { Card } from '@/components/ui/card'
+import { AnimatedCounter } from '@/components/ui/motion'
+import { cn } from '@/lib/utils'
 
 interface StatsCardsProps {
   stats: {
@@ -14,44 +26,83 @@ export function StatsCards({ stats }: StatsCardsProps) {
     {
       label: 'Total Workflows',
       value: stats.total,
-      color: 'text-gray-900 dark:text-white',
-      bgColor: 'bg-gray-100 dark:bg-gray-800',
+      icon: LayoutGrid,
+      color: 'text-[hsl(var(--foreground))]',
+      iconBg: 'bg-[hsl(var(--muted))]',
+      iconColor: 'text-[hsl(var(--muted-foreground))]',
     },
     {
       label: 'In Progress',
       value: stats.inProgress,
-      color: 'text-blue-600 dark:text-blue-400',
-      bgColor: 'bg-blue-50 dark:bg-blue-900/30',
+      icon: Loader2,
+      color: 'text-[hsl(var(--info))]',
+      iconBg: 'bg-[hsl(var(--info-muted))]',
+      iconColor: 'text-[hsl(var(--info))]',
+      animate: true,
     },
     {
       label: 'Completed',
       value: stats.completed,
-      color: 'text-green-600 dark:text-green-400',
-      bgColor: 'bg-green-50 dark:bg-green-900/30',
+      icon: CheckCircle2,
+      color: 'text-[hsl(var(--success))]',
+      iconBg: 'bg-[hsl(var(--success-muted))]',
+      iconColor: 'text-[hsl(var(--success))]',
     },
     {
       label: 'Failed',
       value: stats.failed,
-      color: 'text-red-600 dark:text-red-400',
-      bgColor: 'bg-red-50 dark:bg-red-900/30',
+      icon: XCircle,
+      color: 'text-[hsl(var(--destructive))]',
+      iconBg: 'bg-[hsl(var(--destructive)/0.1)]',
+      iconColor: 'text-[hsl(var(--destructive))]',
     },
   ]
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      {cards.map((card) => (
-        <div
-          key={card.label}
-          className={`rounded-lg border border-gray-200 p-4 dark:border-gray-700 ${card.bgColor}`}
-        >
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            {card.label}
-          </p>
-          <p className={`mt-1 text-3xl font-bold ${card.color}`}>
-            {card.value}
-          </p>
-        </div>
-      ))}
+      {cards.map((card, index) => {
+        const Icon = card.icon
+
+        return (
+          <motion.div
+            key={card.label}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{
+              duration: 0.3,
+              delay: index * 0.05,
+              ease: [0, 0, 0.2, 1],
+            }}
+          >
+            <Card className="p-4 hover-lift">
+              <div className="flex items-center gap-4">
+                <div
+                  className={cn(
+                    'flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-lg)]',
+                    card.iconBg
+                  )}
+                >
+                  <Icon
+                    className={cn(
+                      'h-5 w-5',
+                      card.iconColor,
+                      card.animate && 'animate-spin'
+                    )}
+                  />
+                </div>
+                <div>
+                  <p className="text-sm text-[hsl(var(--muted-foreground))]">
+                    {card.label}
+                  </p>
+                  <p className={cn('text-2xl font-bold', card.color)}>
+                    <AnimatedCounter value={card.value} duration={0.5} />
+                  </p>
+                </div>
+              </div>
+            </Card>
+          </motion.div>
+        )
+      })}
     </div>
   )
 }

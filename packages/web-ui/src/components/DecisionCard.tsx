@@ -1,57 +1,102 @@
+'use client'
+
 import type { Decision } from '@prisma/client'
+import { motion } from 'framer-motion'
+import {
+  Building2,
+  Package,
+  Scale,
+  Wrench,
+  Lightbulb,
+  ArrowRight,
+} from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { cn } from '@/lib/utils'
 
 interface DecisionCardProps {
   decision: Decision
 }
 
-const categoryLabels: Record<string, { label: string; emoji: string }> = {
-  ARCHITECTURE: { label: 'Architecture', emoji: '🏗️' },
-  LIBRARY_CHOICE: { label: 'Library Choice', emoji: '📦' },
-  TRADE_OFF: { label: 'Trade-off', emoji: '⚖️' },
-  WORKAROUND: { label: 'Workaround', emoji: '🔧' },
-  OTHER: { label: 'Other', emoji: '💡' },
+const categoryConfig: Record<
+  string,
+  { label: string; icon: React.ReactNode; color: string }
+> = {
+  ARCHITECTURE: {
+    label: 'Architecture',
+    icon: <Building2 className="h-3.5 w-3.5" />,
+    color: 'text-[hsl(var(--primary))]',
+  },
+  LIBRARY_CHOICE: {
+    label: 'Library Choice',
+    icon: <Package className="h-3.5 w-3.5" />,
+    color: 'text-[hsl(var(--info))]',
+  },
+  TRADE_OFF: {
+    label: 'Trade-off',
+    icon: <Scale className="h-3.5 w-3.5" />,
+    color: 'text-[hsl(var(--warning))]',
+  },
+  WORKAROUND: {
+    label: 'Workaround',
+    icon: <Wrench className="h-3.5 w-3.5" />,
+    color: 'text-[hsl(var(--muted-foreground))]',
+  },
+  OTHER: {
+    label: 'Other',
+    icon: <Lightbulb className="h-3.5 w-3.5" />,
+    color: 'text-[hsl(var(--muted-foreground))]',
+  },
 }
 
 export function DecisionCard({ decision }: DecisionCardProps) {
-  const category = categoryLabels[decision.category] ?? categoryLabels.OTHER!
+  const category = categoryConfig[decision.category] ?? categoryConfig.OTHER!
 
   return (
-    <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-900/30">
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-2">
-          <span>{category.emoji}</span>
-          <span className="text-xs font-medium text-blue-700 dark:text-blue-300">
-            {category.label}
-          </span>
-        </div>
+    <motion.div
+      initial={{ opacity: 0, y: 5 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="rounded-[var(--radius-lg)] border border-[hsl(var(--primary)/0.2)] bg-[hsl(var(--primary)/0.05)] p-4"
+    >
+      {/* Header */}
+      <div className="flex items-center gap-2">
+        <span className={category!.color}>{category!.icon}</span>
+        <span className={cn('text-xs font-medium', category!.color)}>
+          {category!.label}
+        </span>
       </div>
 
-      <p className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
+      {/* Question */}
+      <p className="mt-2 font-medium text-[hsl(var(--foreground))]">
         {decision.question}
       </p>
 
+      {/* Options considered */}
       {decision.optionsConsidered.length > 0 && (
-        <div className="mt-2 text-xs text-gray-600 dark:text-gray-400">
-          <span className="font-medium">Options:</span>{' '}
+        <div className="mt-2 text-xs text-[hsl(var(--muted-foreground))]">
+          <span className="font-medium">Options considered:</span>{' '}
           {decision.optionsConsidered.join(', ')}
         </div>
       )}
 
-      <div className="mt-2 flex items-center gap-2">
-        <span className="rounded bg-blue-200 px-2 py-0.5 text-xs font-semibold text-blue-800 dark:bg-blue-800 dark:text-blue-200">
-          → {decision.chosen}
-        </span>
+      {/* Chosen option */}
+      <div className="mt-3 flex items-center gap-2">
+        <ArrowRight className="h-4 w-4 text-[hsl(var(--primary))]" />
+        <Badge variant="info" size="sm">
+          {decision.chosen}
+        </Badge>
       </div>
 
-      <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">
+      {/* Reasoning */}
+      <p className="mt-3 text-sm text-[hsl(var(--foreground)/0.85)]">
         {decision.reasoning}
       </p>
 
+      {/* Trade-offs */}
       {decision.tradeOffs && (
-        <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+        <p className="mt-2 text-xs text-[hsl(var(--muted-foreground))]">
           <span className="font-medium">Trade-offs:</span> {decision.tradeOffs}
         </p>
       )}
-    </div>
+    </motion.div>
   )
 }
