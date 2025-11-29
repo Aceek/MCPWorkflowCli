@@ -1,66 +1,29 @@
-// MCP Workflow Tracker - Prisma Schema
-// Source: packages/shared/prisma/schema.prisma
+// MCP Workflow Tracker - Prisma Schema (SQLite)
+// Source: packages/shared/prisma/schema.sqlite.prisma
+// Usage: For standalone MCP server without external DB dependency
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
 // ============================================
-// ENUMS (Type Safety)
-// ============================================
-
-enum WorkflowStatus {
-  IN_PROGRESS
-  COMPLETED
-  FAILED
-}
-
-enum TaskStatus {
-  IN_PROGRESS
-  SUCCESS
-  PARTIAL_SUCCESS
-  FAILED
-}
-
-enum DecisionCategory {
-  ARCHITECTURE
-  LIBRARY_CHOICE
-  TRADE_OFF
-  WORKAROUND
-  OTHER
-}
-
-enum IssueType {
-  DOC_GAP
-  BUG
-  DEPENDENCY_CONFLICT
-  UNCLEAR_REQUIREMENT
-  OTHER
-}
-
-enum TestsStatus {
-  PASSED
-  FAILED
-  NOT_RUN
-}
-
-// ============================================
-// MODELS
+// MODELS (SQLite compatible)
+// Note: Enums stored as TEXT, arrays as JSON
 // ============================================
 
 model Workflow {
-  id          String         @id @default(cuid())
+  id          String   @id @default(cuid())
   name        String
-  description String?        @db.Text
-  plan        Json?          // Structure libre (array d'étapes)
-  status      WorkflowStatus @default(IN_PROGRESS)
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  description String?
+  plan        String?  // JSON string
+  status      String   @default("IN_PROGRESS") // WorkflowStatus enum
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   tasks Task[]
 
@@ -69,49 +32,49 @@ model Workflow {
 }
 
 model Task {
-  id           String     @id @default(cuid())
+  id           String   @id @default(cuid())
   workflowId   String
   parentTaskId String?
   name         String
-  goal         String     @db.Text
-  status       TaskStatus @default(IN_PROGRESS)
+  goal         String
+  status       String   @default("IN_PROGRESS") // TaskStatus enum
 
-  // Scope (indication de zone, ex: ["auth", "api"])
-  areas String[]
+  // Scope (JSON array)
+  areas String @default("[]")
 
   // Snapshot data (Git ou Checksum)
   snapshotId   String?
-  snapshotType String? // "git" ou "checksum"
-  snapshotData Json? // { gitHash: "abc123" } ou { checksums: {...} }
+  snapshotType String?
+  snapshotData String? // JSON string
 
-  // Timing (calculé automatiquement par le MCP)
+  // Timing
   startedAt   DateTime  @default(now())
   completedAt DateTime?
   durationMs  Int?
 
-  // Outcome (fourni par l'agent dans complete_task)
-  summary            String?  @db.Text
-  achievements       String[] // Peut être vide []
-  limitations        String[] // Peut être vide []
-  manualReviewNeeded Boolean  @default(false)
-  manualReviewReason String?  @db.Text
-  nextSteps          String[]
+  // Outcome
+  summary            String?
+  achievements       String  @default("[]") // JSON array
+  limitations        String  @default("[]") // JSON array
+  manualReviewNeeded Boolean @default(false)
+  manualReviewReason String?
+  nextSteps          String  @default("[]") // JSON array
 
-  // Metadata (fourni par l'agent)
-  packagesAdded    String[]
-  packagesRemoved  String[]
-  commandsExecuted String[]
-  testsStatus      TestsStatus?
+  // Metadata
+  packagesAdded    String  @default("[]") // JSON array
+  packagesRemoved  String  @default("[]") // JSON array
+  commandsExecuted String  @default("[]") // JSON array
+  testsStatus      String? // TestsStatus enum
 
-  // Files changed (calculé par le MCP via Git diff)
-  filesAdded    String[]
-  filesModified String[]
-  filesDeleted  String[]
+  // Files changed
+  filesAdded    String @default("[]") // JSON array
+  filesModified String @default("[]") // JSON array
+  filesDeleted  String @default("[]") // JSON array
 
-  // Verification (calculé par le MCP)
+  // Verification
   scopeMatch      Boolean?
-  unexpectedFiles String[]
-  warnings        String[]
+  unexpectedFiles String  @default("[]") // JSON array
+  warnings        String  @default("[]") // JSON array
 
   // Relations
   workflow   Workflow    @relation(fields: [workflowId], references: [id], onDelete: Cascade)
@@ -128,15 +91,15 @@ model Task {
 }
 
 model Decision {
-  id                String           @id @default(cuid())
+  id                String   @id @default(cuid())
   taskId            String
-  category          DecisionCategory
-  question          String           @db.Text
-  optionsConsidered String[]
+  category          String   // DecisionCategory enum
+  question          String
+  optionsConsidered String   @default("[]") // JSON array
   chosen            String
-  reasoning         String           @db.Text
-  tradeOffs         String?          @db.Text
-  createdAt         DateTime         @default(now())
+  reasoning         String
+  tradeOffs         String?
+  createdAt         DateTime @default(now())
 
   task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
 
@@ -145,13 +108,13 @@ model Decision {
 }
 
 model Issue {
-  id                  String    @id @default(cuid())
+  id                  String   @id @default(cuid())
   taskId              String
-  type                IssueType
-  description         String    @db.Text
-  resolution          String    @db.Text
-  requiresHumanReview Boolean   @default(false)
-  createdAt           DateTime  @default(now())
+  type                String   // IssueType enum
+  description         String
+  resolution          String
+  requiresHumanReview Boolean  @default(false)
+  createdAt           DateTime @default(now())
 
   task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
 
@@ -163,8 +126,8 @@ model Milestone {
   id        String   @id @default(cuid())
   taskId    String
   message   String
-  progress  Int? // 0-100 (optionnel)
-  metadata  Json? // Structure libre
+  progress  Int?
+  metadata  String?  // JSON string
   createdAt DateTime @default(now())
 
   task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)

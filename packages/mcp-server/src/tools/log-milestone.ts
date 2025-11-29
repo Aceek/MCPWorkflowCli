@@ -7,9 +7,9 @@
 
 import { z } from 'zod'
 import { prisma } from '../db.js'
-import { Prisma } from '@prisma/client'
 import { emitMilestoneCreated } from '../websocket/index.js'
 import { NotFoundError } from '../utils/errors.js'
+import { toJsonObject } from '../utils/json-fields.js'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 
 // Zod schema for validation
@@ -66,15 +66,13 @@ export async function handleLogMilestone(
     throw new NotFoundError(`Task not found: ${validated.task_id}`)
   }
 
-  // Create milestone in database
+  // Create milestone in database (SQLite: metadata as JSON string)
   const milestone = await prisma.milestone.create({
     data: {
       taskId: validated.task_id,
       message: validated.message,
       progress: validated.progress,
-      metadata: validated.metadata
-        ? (validated.metadata as Prisma.InputJsonValue)
-        : Prisma.JsonNull,
+      metadata: toJsonObject(validated.metadata as Record<string, unknown> | undefined),
     },
   })
 

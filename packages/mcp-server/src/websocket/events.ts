@@ -10,8 +10,6 @@ import type {
   Decision,
   Issue,
   Milestone,
-  WorkflowStatus,
-  TaskStatus,
 } from '@prisma/client'
 import { getIO } from './server.js'
 

@@ -6,9 +6,16 @@
 
 import { z } from 'zod'
 import { prisma } from '../db.js'
-import { Prisma, WorkflowStatus } from '@prisma/client'
 import { emitWorkflowCreated } from '../websocket/index.js'
+import { workflowPlanToJson } from '../utils/json-fields.js'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
+
+// SQLite: enums stored as strings
+const WorkflowStatus = {
+  IN_PROGRESS: 'IN_PROGRESS',
+  COMPLETED: 'COMPLETED',
+  FAILED: 'FAILED',
+} as const
 
 // Zod schema for validation
 const startWorkflowSchema = z.object({
@@ -68,7 +75,7 @@ export async function handleStartWorkflow(
     data: {
       name: validated.name,
       description: validated.description,
-      plan: validated.plan ?? Prisma.JsonNull,
+      plan: workflowPlanToJson(validated.plan),
       status: WorkflowStatus.IN_PROGRESS,
     },
   })

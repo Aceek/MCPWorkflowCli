@@ -7,7 +7,6 @@
 
 import { z } from 'zod'
 import { prisma } from '../db.js'
-import { TaskStatus, TestsStatus } from '@prisma/client'
 import {
   computeGitDiff,
   verifyScope,
@@ -15,16 +14,31 @@ import {
 } from '../utils/git-snapshot.js'
 import { emitTaskUpdated, emitWorkflowUpdated } from '../websocket/index.js'
 import { NotFoundError, ValidationError } from '../utils/errors.js'
+import { toJsonArray, fromJsonArray, fromJsonObject } from '../utils/json-fields.js'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 
-// Map input strings to Prisma enum values
-const statusMap: Record<string, TaskStatus> = {
+// SQLite: enums stored as strings
+const TaskStatus = {
+  IN_PROGRESS: 'IN_PROGRESS',
+  SUCCESS: 'SUCCESS',
+  PARTIAL_SUCCESS: 'PARTIAL_SUCCESS',
+  FAILED: 'FAILED',
+} as const
+
+const TestsStatus = {
+  PASSED: 'PASSED',
+  FAILED: 'FAILED',
+  NOT_RUN: 'NOT_RUN',
+} as const
+
+// Map input strings to enum values
+const statusMap: Record<string, string> = {
   success: TaskStatus.SUCCESS,
   partial_success: TaskStatus.PARTIAL_SUCCESS,
   failed: TaskStatus.FAILED,
 }
 
-const testsStatusMap: Record<string, TestsStatus> = {
+const testsStatusMap: Record<string, string> = {
   passed: TestsStatus.PASSED,
   failed: TestsStatus.FAILED,
   not_run: TestsStatus.NOT_RUN,
@@ -159,16 +173,20 @@ export async function handleCompleteTask(
   let filesDeleted: string[] = []
 
   if (task.snapshotType === 'git' && task.snapshotData) {
-    const snapshotData = task.snapshotData as unknown as GitSnapshotData
-    const diff = await computeGitDiff(snapshotData.gitHash)
-    filesAdded = diff.added
-    filesModified = diff.modified
-    filesDeleted = diff.deleted
+    // SQLite: snapshotData is stored as JSON string
+    const snapshotData = fromJsonObject<GitSnapshotData>(task.snapshotData as string)
+    if (snapshotData?.gitHash) {
+      const diff = await computeGitDiff(snapshotData.gitHash)
+      filesAdded = diff.added
+      filesModified = diff.modified
+      filesDeleted = diff.deleted
+    }
   }
 
-  // Verify scope
+  // Verify scope (SQLite: areas stored as JSON string)
   const allChangedFiles = [...filesAdded, ...filesModified, ...filesDeleted]
-  const scopeVerification = verifyScope(allChangedFiles, task.areas)
+  const taskAreas = fromJsonArray<string>(task.areas as string)
+  const scopeVerification = verifyScope(allChangedFiles, taskAreas)
 
   // Map status to Prisma enum
   const taskStatus = statusMap[validated.status]
@@ -177,12 +195,12 @@ export async function handleCompleteTask(
   }
 
   // Map tests status if provided
-  let testsStatus: TestsStatus | undefined
+  let testsStatus: string | undefined
   if (validated.metadata?.tests_status) {
     testsStatus = testsStatusMap[validated.metadata.tests_status]
   }
 
-  // Update task in database
+  // Update task in database (SQLite: arrays stored as JSON strings)
   const updatedTask = await prisma.task.update({
     where: { id: validated.task_id },
     data: {
@@ -190,21 +208,21 @@ export async function handleCompleteTask(
       completedAt,
       durationMs,
       summary: validated.outcome.summary,
-      achievements: validated.outcome.achievements ?? [],
-      limitations: validated.outcome.limitations ?? [],
+      achievements: toJsonArray(validated.outcome.achievements),
+      limitations: toJsonArray(validated.outcome.limitations),
       manualReviewNeeded: validated.outcome.manual_review_needed ?? false,
       manualReviewReason: validated.outcome.manual_review_reason,
-      nextSteps: validated.outcome.next_steps ?? [],
-      packagesAdded: validated.metadata?.packages_added ?? [],
-      packagesRemoved: validated.metadata?.packages_removed ?? [],
-      commandsExecuted: validated.metadata?.commands_executed ?? [],
+      nextSteps: toJsonArray(validated.outcome.next_steps),
+      packagesAdded: toJsonArray(validated.metadata?.packages_added),
+      packagesRemoved: toJsonArray(validated.metadata?.packages_removed),
+      commandsExecuted: toJsonArray(validated.metadata?.commands_executed),
       testsStatus,
-      filesAdded,
-      filesModified,
-      filesDeleted,
+      filesAdded: toJsonArray(filesAdded),
+      filesModified: toJsonArray(filesModified),
+      filesDeleted: toJsonArray(filesDeleted),
       scopeMatch: scopeVerification.scopeMatch,
-      unexpectedFiles: scopeVerification.unexpectedFiles,
-      warnings: scopeVerification.warnings,
+      unexpectedFiles: toJsonArray(scopeVerification.unexpectedFiles),
+      warnings: toJsonArray(scopeVerification.warnings),
     },
   })
 
