@@ -8,6 +8,7 @@ import { z } from 'zod'
 import { prisma } from '../db.js'
 import { emitWorkflowCreated } from '../websocket/index.js'
 import { WorkflowStatus } from '../types/enums.js'
+import { workflowPlanToJson } from '../utils/json-fields.js'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 
 // Zod schema for validation
@@ -68,7 +69,7 @@ export async function handleStartWorkflow(
     data: {
       name: validated.name,
       description: validated.description,
-      plan: validated.plan as any,
+      plan: workflowPlanToJson(validated.plan),
       status: WorkflowStatus.IN_PROGRESS,
     },
   })

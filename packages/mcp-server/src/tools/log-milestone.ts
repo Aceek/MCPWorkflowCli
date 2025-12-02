@@ -9,6 +9,7 @@ import { z } from 'zod'
 import { prisma } from '../db.js'
 import { emitMilestoneCreated } from '../websocket/index.js'
 import { NotFoundError } from '../utils/errors.js'
+import { toJsonObject } from '../utils/json-fields.js'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 
 // Zod schema for validation
@@ -71,7 +72,7 @@ export async function handleLogMilestone(
       taskId: validated.task_id,
       message: validated.message,
       progress: validated.progress,
-      metadata: validated.metadata ? JSON.stringify(validated.metadata) : null,
+      metadata: toJsonObject(validated.metadata),
     },
   })
 

@@ -9,6 +9,7 @@ import { prisma } from '../db.js'
 import { emitDecisionCreated } from '../websocket/index.js'
 import { NotFoundError } from '../utils/errors.js'
 import { decisionCategoryMap } from '../types/enums.js'
+import { toJsonArray } from '../utils/json-fields.js'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 
 // Zod schema for validation
@@ -106,7 +107,7 @@ export async function handleLogDecision(
       taskId: validated.task_id,
       category,
       question: validated.question,
-      optionsConsidered: JSON.stringify(validated.options_considered ?? []),
+      optionsConsidered: toJsonArray(validated.options_considered),
       chosen: validated.chosen,
       reasoning: validated.reasoning,
       tradeOffs: validated.trade_offs,

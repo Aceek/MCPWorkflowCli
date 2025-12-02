@@ -11,6 +11,7 @@ import { createGitSnapshot } from '../utils/git-snapshot.js'
 import { emitTaskCreated, emitWorkflowUpdated } from '../websocket/index.js'
 import { NotFoundError } from '../utils/errors.js'
 import { WorkflowStatus, TaskStatus } from '../types/enums.js'
+import { toJsonArray, toJsonObject } from '../utils/json-fields.js'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 
 // Zod schema for validation
@@ -93,10 +94,10 @@ export async function handleStartTask(args: unknown): Promise<CallToolResult> {
       parentTaskId: validated.parent_task_id,
       name: validated.name,
       goal: validated.goal,
-      areas: JSON.stringify(validated.areas ?? []),
+      areas: toJsonArray(validated.areas),
       snapshotId: snapshot.id,
       snapshotType: snapshot.type,
-      snapshotData: JSON.stringify(snapshot.data),
+      snapshotData: toJsonObject(snapshot.data),
       status: TaskStatus.IN_PROGRESS,
     },
   })
