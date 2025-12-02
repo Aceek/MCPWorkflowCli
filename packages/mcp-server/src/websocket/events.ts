@@ -12,6 +12,9 @@ import type {
   Milestone,
 } from '@prisma/client'
 import { getIO } from './server.js'
+import { createLogger } from '@mcp-tracker/shared'
+
+const logger = createLogger('websocket-events')
 
 // ============================================
 // Event Types
@@ -91,7 +94,7 @@ export function emitWorkflowCreated(workflow: Workflow): void {
   io.emit(EVENTS.WORKFLOW_CREATED, event)
   io.emit(EVENTS.STATS_UPDATED, { timestamp: new Date().toISOString() })
 
-  console.error(`[WebSocket] Emitted ${EVENTS.WORKFLOW_CREATED}: ${workflow.id}`)
+  logger.info('Emitted workflow created', { event: EVENTS.WORKFLOW_CREATED, workflowId: workflow.id })
 }
 
 /**
@@ -111,7 +114,7 @@ export function emitWorkflowUpdated(workflow: Workflow): void {
 
   io.emit(EVENTS.STATS_UPDATED, { timestamp: new Date().toISOString() })
 
-  console.error(`[WebSocket] Emitted ${EVENTS.WORKFLOW_UPDATED}: ${workflow.id}`)
+  logger.info('Emitted workflow updated', { event: EVENTS.WORKFLOW_UPDATED, workflowId: workflow.id })
 }
 
 /**
@@ -129,7 +132,7 @@ export function emitTaskCreated(task: Task, workflowId: string): void {
   // Emit to workflow-specific room
   io.to(`workflow:${workflowId}`).emit(EVENTS.TASK_CREATED, event)
 
-  console.error(`[WebSocket] Emitted ${EVENTS.TASK_CREATED}: ${task.id}`)
+  logger.info('Emitted task created', { event: EVENTS.TASK_CREATED, taskId: task.id, workflowId })
 }
 
 /**
@@ -147,7 +150,7 @@ export function emitTaskUpdated(task: Task, workflowId: string): void {
   // Emit to workflow-specific room
   io.to(`workflow:${workflowId}`).emit(EVENTS.TASK_UPDATED, event)
 
-  console.error(`[WebSocket] Emitted ${EVENTS.TASK_UPDATED}: ${task.id}`)
+  logger.info('Emitted task updated', { event: EVENTS.TASK_UPDATED, taskId: task.id, workflowId })
 }
 
 /**
@@ -166,7 +169,7 @@ export function emitDecisionCreated(
   // Only emit to workflow-specific room (detail view)
   io.to(`workflow:${workflowId}`).emit(EVENTS.DECISION_CREATED, event)
 
-  console.error(`[WebSocket] Emitted ${EVENTS.DECISION_CREATED}: ${decision.id}`)
+  logger.info('Emitted decision created', { event: EVENTS.DECISION_CREATED, decisionId: decision.id, taskId, workflowId })
 }
 
 /**
@@ -185,7 +188,7 @@ export function emitIssueCreated(
   // Only emit to workflow-specific room (detail view)
   io.to(`workflow:${workflowId}`).emit(EVENTS.ISSUE_CREATED, event)
 
-  console.error(`[WebSocket] Emitted ${EVENTS.ISSUE_CREATED}: ${issue.id}`)
+  logger.info('Emitted issue created', { event: EVENTS.ISSUE_CREATED, issueId: issue.id, taskId, workflowId })
 }
 
 /**
@@ -204,5 +207,5 @@ export function emitMilestoneCreated(
   // Only emit to workflow-specific room (detail view)
   io.to(`workflow:${workflowId}`).emit(EVENTS.MILESTONE_CREATED, event)
 
-  console.error(`[WebSocket] Emitted ${EVENTS.MILESTONE_CREATED}: ${milestone.id}`)
+  logger.info('Emitted milestone created', { event: EVENTS.MILESTONE_CREATED, milestoneId: milestone.id, taskId, workflowId })
 }

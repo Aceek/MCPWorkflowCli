@@ -6,6 +6,9 @@
  */
 
 import { prisma } from '../db.js'
+import { createLogger } from '@mcp-tracker/shared'
+
+const logger = createLogger('server-registry')
 
 const HEARTBEAT_INTERVAL_MS = 5000 // 5 seconds
 const STALE_THRESHOLD_MS = 15000 // Consider stale if no heartbeat for 15s
@@ -36,9 +39,7 @@ export async function registerServerPort(port: number): Promise<void> {
     },
   })
 
-  console.error(
-    `[ServerRegistry] Registered WebSocket port ${port} (PID: ${processId})`
-  )
+  logger.info('Registered WebSocket port', { port, processId })
 
   // Start heartbeat
   startHeartbeat()
@@ -82,7 +83,7 @@ export async function unregisterServer(): Promise<void> {
     await prisma.serverInfo.delete({
       where: { id: 'singleton' },
     })
-    console.error('[ServerRegistry] Unregistered server')
+    logger.info('Unregistered server')
   } catch {
     // Ignore if already deleted
   }
@@ -107,9 +108,7 @@ export async function getActiveServerPort(): Promise<number | null> {
     const lastHeartbeat = info.lastHeartbeat.getTime()
 
     if (now - lastHeartbeat > STALE_THRESHOLD_MS) {
-      console.error(
-        `[ServerRegistry] Stale entry detected (last heartbeat: ${info.lastHeartbeat})`
-      )
+      logger.warn('Stale entry detected', { lastHeartbeat: info.lastHeartbeat })
       return null
     }
 

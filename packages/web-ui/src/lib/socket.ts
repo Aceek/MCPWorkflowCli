@@ -6,6 +6,9 @@
  */
 
 import { io, Socket } from 'socket.io-client'
+import { createLogger } from './logger'
+
+const logger = createLogger('socket')
 
 // Event types (must match server-side events.ts)
 export const EVENTS = {
@@ -51,15 +54,13 @@ export async function getSocketAsync(): Promise<Socket | null> {
   const port = await discoverPort()
 
   if (!port) {
-    console.warn('[WebSocket] No active server found')
+    logger.warn('No active server found')
     return null
   }
 
   // If port changed, reconnect
   if (socket && currentPort !== port) {
-    console.log(
-      `[WebSocket] Port changed from ${currentPort} to ${port}, reconnecting...`
-    )
+    logger.info('Port changed, reconnecting', { oldPort: currentPort, newPort: port })
     socket.disconnect()
     socket = null
   }
@@ -80,15 +81,15 @@ export async function getSocketAsync(): Promise<Socket | null> {
     // Debug logging in development
     if (process.env.NODE_ENV === 'development') {
       socket.on('connect', () => {
-        console.log(`[WebSocket] Connected to port ${port}:`, socket?.id)
+        logger.info('Connected', { port, socketId: socket?.id })
       })
 
       socket.on('disconnect', (reason) => {
-        console.log('[WebSocket] Disconnected:', reason)
+        logger.info('Disconnected', { reason })
       })
 
       socket.on('connect_error', (error) => {
-        console.error('[WebSocket] Connection error:', error.message)
+        logger.error('Connection error', { message: error.message })
       })
     }
   }
@@ -115,9 +116,7 @@ export function startPortDiscovery(): void {
     const newPort = await discoverPort()
 
     if (newPort && newPort !== currentPort && socket) {
-      console.log(
-        `[WebSocket] Server port changed to ${newPort}, reconnecting...`
-      )
+      logger.info('Server port changed, reconnecting', { newPort })
       socket.disconnect()
       socket = null
       const reconnectedSocket = await getSocketAsync()

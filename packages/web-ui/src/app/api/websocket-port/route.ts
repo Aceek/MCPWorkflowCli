@@ -7,6 +7,9 @@
 
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { createLogger } from '@/lib/logger'
+
+const logger = createLogger('api-websocket-port')
 
 const STALE_THRESHOLD_MS = 15000 // Must match server-registry.ts
 
@@ -45,7 +48,7 @@ export async function GET() {
       processId: info.processId,
     })
   } catch (error) {
-    console.error('[API] Failed to get WebSocket port:', error)
+    logger.error('Failed to get WebSocket port', { error: error instanceof Error ? error.message : String(error) })
     return NextResponse.json(
       { error: 'Failed to query database', port: null },
       { status: 500 }

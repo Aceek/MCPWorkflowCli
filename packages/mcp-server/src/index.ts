@@ -18,6 +18,7 @@ import {
   type CallToolResult,
 } from '@modelcontextprotocol/sdk/types.js'
 import { ZodError } from 'zod'
+import { createLogger } from '@mcp-tracker/shared'
 
 // Import tool definitions and handlers
 import {
@@ -50,6 +51,9 @@ import {
 
 const MCP_SERVER_NAME = 'mcp-workflow-tracker'
 const MCP_SERVER_VERSION = '1.0.0'
+
+// Create logger for this module
+const logger = createLogger('mcp-server')
 
 /**
  * Create and configure the MCP server
@@ -185,11 +189,11 @@ async function main(): Promise<void> {
   const wsServer = getWebSocketServer()
   const wsPort = await wsServer.start()
   if (wsPort) {
-    console.error(`[MCP] WebSocket available on port ${wsPort}`)
+    logger.info('WebSocket available', { port: wsPort })
     // Register port in database for Web UI discovery
     await registerServerPort(wsPort)
   } else {
-    console.error('[MCP] WebSocket unavailable - real-time updates disabled')
+    logger.warn('WebSocket unavailable - real-time updates disabled')
   }
 
   // Handle graceful shutdown
@@ -207,11 +211,15 @@ async function main(): Promise<void> {
   await server.connect(transport)
 
   // Log to stderr (stdout is reserved for MCP protocol)
-  console.error(`${MCP_SERVER_NAME} v${MCP_SERVER_VERSION} running on stdio`)
+  logger.info('Server running', {
+    name: MCP_SERVER_NAME,
+    version: MCP_SERVER_VERSION,
+    transport: 'stdio',
+  })
 }
 
 // Run the server
 main().catch((error) => {
-  console.error('Fatal error:', error)
+  logger.error('Fatal error', { error: error instanceof Error ? error.message : String(error) })
   process.exit(1)
 })

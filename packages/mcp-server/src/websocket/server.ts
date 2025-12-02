@@ -7,6 +7,9 @@
 
 import { Server as HttpServer, createServer } from 'http'
 import { Server as SocketIOServer, Socket } from 'socket.io'
+import { createLogger } from '@mcp-tracker/shared'
+
+const logger = createLogger('websocket-server')
 
 const DEFAULT_WEBSOCKET_PORT = parseInt(process.env.WEBSOCKET_PORT ?? '3002', 10)
 const MAX_PORT_ATTEMPTS = 10
@@ -40,26 +43,26 @@ function createSocketIOServer(httpServer: HttpServer): SocketIOServer {
   // Connection handling
   io.on('connection', (socket: Socket) => {
     // Log to stderr (stdout reserved for MCP protocol)
-    console.error(`[WebSocket] Client connected: ${socket.id}`)
+    logger.info('Client connected', { socketId: socket.id })
 
     // Handle client subscribing to specific workflow
     socket.on('subscribe:workflow', (workflowId: string) => {
       socket.join(`workflow:${workflowId}`)
-      console.error(`[WebSocket] Client ${socket.id} subscribed to workflow:${workflowId}`)
+      logger.info('Client subscribed to workflow', { socketId: socket.id, workflowId })
     })
 
     // Handle client unsubscribing from workflow
     socket.on('unsubscribe:workflow', (workflowId: string) => {
       socket.leave(`workflow:${workflowId}`)
-      console.error(`[WebSocket] Client ${socket.id} unsubscribed from workflow:${workflowId}`)
+      logger.info('Client unsubscribed from workflow', { socketId: socket.id, workflowId })
     })
 
     socket.on('disconnect', (reason) => {
-      console.error(`[WebSocket] Client disconnected: ${socket.id} (${reason})`)
+      logger.info('Client disconnected', { socketId: socket.id, reason })
     })
 
     socket.on('error', (error) => {
-      console.error(`[WebSocket] Socket error: ${error.message}`)
+      logger.error('Socket error', { message: error.message })
     })
   })
 
@@ -73,7 +76,7 @@ function tryListen(httpServer: HttpServer, port: number): Promise<boolean> {
   return new Promise((resolve) => {
     const onError = (err: NodeJS.ErrnoException) => {
       if (err.code === 'EADDRINUSE') {
-        console.error(`[WebSocket] Port ${port} in use, trying next...`)
+        logger.warn('Port in use, trying next', { port })
       }
       httpServer.removeListener('listening', onListening)
       resolve(false)
@@ -81,7 +84,7 @@ function tryListen(httpServer: HttpServer, port: number): Promise<boolean> {
 
     const onListening = () => {
       httpServer.removeListener('error', onError)
-      console.error(`[WebSocket] Server listening on port ${port}`)
+      logger.info('Server listening', { port })
       resolve(true)
     }
 
@@ -132,7 +135,7 @@ export function getWebSocketServer(): WebSocketServer {
       httpServer.close()
     }
 
-    console.error(`[WebSocket] Could not find available port after ${MAX_PORT_ATTEMPTS} attempts. WebSocket disabled.`)
+    logger.warn('Could not find available port', { attempts: MAX_PORT_ATTEMPTS })
     return null
   }
 
@@ -141,7 +144,7 @@ export function getWebSocketServer(): WebSocketServer {
       if (currentIO && currentHttpServer) {
         currentIO.close(() => {
           currentHttpServer?.close(() => {
-            console.error('[WebSocket] Server stopped')
+            logger.info('Server stopped')
             resolve()
           })
         })
