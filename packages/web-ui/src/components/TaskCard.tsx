@@ -27,22 +27,12 @@ import { FilesList } from './FilesList'
 import { MilestoneTimeline } from './MilestoneTimeline'
 import { cn } from '@/lib/utils'
 import { parseJsonArray } from '@/lib/json-parse'
+import { formatTokens } from '@/lib/format-utils'
 
 type TaskWithRelations = Task & {
   decisions: Decision[]
   issues: Issue[]
   milestones: Milestone[]
-}
-
-function formatTokens(tokens: number | null): string {
-  if (!tokens) return '-'
-  if (tokens >= 1000000) {
-    return `${(tokens / 1000000).toFixed(1)}M`
-  }
-  if (tokens >= 1000) {
-    return `${(tokens / 1000).toFixed(1)}k`
-  }
-  return tokens.toString()
 }
 
 interface TaskCardProps {

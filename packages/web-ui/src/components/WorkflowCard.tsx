@@ -7,6 +7,8 @@ import { Calendar, ListTodo, ChevronRight, Clock, Zap } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { StatusBadge } from './StatusBadge'
 import { cn } from '@/lib/utils'
+import { formatDate, formatDuration } from '@/lib/date-utils'
+import { formatTokens } from '@/lib/format-utils'
 
 interface WorkflowCardProps {
   workflow: Workflow & {
@@ -15,41 +17,6 @@ interface WorkflowCardProps {
     }
   }
   index?: number
-}
-
-function formatDate(date: Date | string): string {
-  const d = typeof date === 'string' ? new Date(date) : date
-  if (isNaN(d.getTime())) {
-    return 'Date invalide'
-  }
-  return new Intl.DateTimeFormat('fr-FR', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(d)
-}
-
-function formatDuration(ms: number | null): string {
-  if (!ms) return '-'
-  const seconds = Math.floor(ms / 1000)
-  if (seconds < 60) return `${seconds}s`
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m ${seconds % 60}s`
-  const hours = Math.floor(minutes / 60)
-  return `${hours}h ${minutes % 60}m`
-}
-
-function formatTokens(tokens: number | null): string {
-  if (!tokens) return '-'
-  if (tokens >= 1000000) {
-    return `${(tokens / 1000000).toFixed(1)}M`
-  }
-  if (tokens >= 1000) {
-    return `${(tokens / 1000).toFixed(1)}k`
-  }
-  return tokens.toString()
 }
 
 export function WorkflowCard({ workflow, index = 0 }: WorkflowCardProps) {
