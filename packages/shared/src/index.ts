@@ -45,6 +45,7 @@ export {
   type Issue,
   type Milestone,
   type Prisma,
+  type ServerInfo,
 } from '@prisma/client'
 
 // ============================================
@@ -91,6 +92,20 @@ export const TestsStatus = {
   NOT_RUN: 'NOT_RUN',
 } as const
 export type TestsStatus = (typeof TestsStatus)[keyof typeof TestsStatus]
+
+// ============================================
+// ZOD VALIDATION SCHEMAS
+// Centralized Zod schemas for type-safe validation
+// ============================================
+
+export * from './schemas.js'
+
+// ============================================
+// CONSTANTS
+// Shared constants for enums, labels, and configuration
+// ============================================
+
+export * from './constants.js'
 
 // ============================================
 // LOGGER TYPES
