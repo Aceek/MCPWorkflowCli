@@ -59,7 +59,11 @@ export async function createGitSnapshot(
         data: { gitHash: trimmedHash },
       }
     }
-  } catch {
+  } catch (error) {
+    console.error(
+      '[git-snapshot] Failed to create Git snapshot, falling back to checksum:',
+      error instanceof Error ? error.message : error
+    )
     // Fall through to checksum snapshot
   }
 
@@ -92,7 +96,11 @@ async function createChecksumSnapshot(
       const content = await readFile(`${cwd}/${file}`, 'utf-8')
       const hash = createHash('md5').update(content).digest('hex')
       checksums[file] = hash
-    } catch {
+    } catch (error) {
+      console.error(
+        `[git-snapshot] Failed to read file for checksum (${file}):`,
+        error instanceof Error ? error.message : error
+      )
       // Skip files that can't be read
     }
   }
@@ -153,7 +161,11 @@ async function getCommittedDiff(
 
     const diff = await git.diff([startHash, 'HEAD', '--name-status'])
     return parseDiffOutput(diff)
-  } catch {
+  } catch (error) {
+    console.error(
+      `[git-snapshot] Failed to get committed diff from ${startHash} to HEAD:`,
+      error instanceof Error ? error.message : error
+    )
     // If diff fails (e.g., invalid hash), return empty
     return { added: [], modified: [], deleted: [] }
   }
@@ -172,7 +184,11 @@ async function getWorkingTreeDiff(git: SimpleGit): Promise<GitDiffResult> {
     const unstagedResult = parseDiffOutput(unstagedDiff)
 
     return mergeDiffs(stagedResult, unstagedResult)
-  } catch {
+  } catch (error) {
+    console.error(
+      '[git-snapshot] Failed to get working tree diff:',
+      error instanceof Error ? error.message : error
+    )
     return { added: [], modified: [], deleted: [] }
   }
 }
