@@ -2,6 +2,9 @@
 
 import { useEffect } from 'react'
 import Link from 'next/link'
+import { createLogger } from '@/lib/logger'
+
+const logger = createLogger('workflow-error-boundary')
 
 interface ErrorProps {
   error: Error & { digest?: string }
@@ -10,7 +13,11 @@ interface ErrorProps {
 
 export default function WorkflowError({ error, reset }: ErrorProps) {
   useEffect(() => {
-    console.error('Workflow page error:', error)
+    logger.error('Workflow page error', {
+      message: error.message,
+      digest: error.digest,
+      stack: error.stack,
+    })
   }, [error])
 
   // Check if it's a "not found" type error

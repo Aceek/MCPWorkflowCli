@@ -1,6 +1,9 @@
 'use client'
 
 import { useEffect } from 'react'
+import { createLogger } from '@/lib/logger'
+
+const logger = createLogger('error-boundary')
 
 interface ErrorProps {
   error: Error & { digest?: string }
@@ -9,8 +12,11 @@ interface ErrorProps {
 
 export default function Error({ error, reset }: ErrorProps) {
   useEffect(() => {
-    // Log error to console in development
-    console.error('Application error:', error)
+    logger.error('Application error', {
+      message: error.message,
+      digest: error.digest,
+      stack: error.stack,
+    })
   }, [error])
 
   return (

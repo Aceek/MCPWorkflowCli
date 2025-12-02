@@ -4,21 +4,10 @@ import type { Milestone } from '@prisma/client'
 import { motion } from 'framer-motion'
 import { Progress } from '@/components/ui/progress'
 import { cn } from '@/lib/utils'
+import { formatTime } from '@/lib/date-utils'
 
 interface MilestoneTimelineProps {
   milestones: Milestone[]
-}
-
-function formatTime(date: Date | string): string {
-  const d = typeof date === 'string' ? new Date(date) : date
-  if (isNaN(d.getTime())) {
-    return '--:--:--'
-  }
-  return new Intl.DateTimeFormat('fr-FR', {
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  }).format(d)
 }
 
 export function MilestoneTimeline({ milestones }: MilestoneTimelineProps) {

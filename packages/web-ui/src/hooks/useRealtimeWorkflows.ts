@@ -3,24 +3,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import type { Workflow } from '@prisma/client'
 import { useWebSocket, EVENTS } from './useWebSocket'
-
-type WorkflowWithCount = Workflow & {
-  _count: {
-    tasks: number
-  }
-}
+import { fetchWorkflows, type WorkflowsResponse, type WorkflowWithCount } from '@/lib/api'
 
 interface Stats {
   total: number
   inProgress: number
   completed: number
   failed: number
-}
-
-interface WorkflowsData {
-  workflows: WorkflowWithCount[]
-  stats: Stats
-  timestamp: string
 }
 
 interface WorkflowCreatedEvent {
@@ -69,20 +58,9 @@ export function useRealtimeWorkflows(options: UseRealtimeWorkflowsOptions = {}) 
   const { isConnected, on, off } = useWebSocket({ autoConnect: enabled })
 
   // Fetch workflows from API
-  const fetchWorkflows = useCallback(async () => {
+  const fetchWorkflowsData = useCallback(async () => {
     try {
-      const params = new URLSearchParams()
-      if (statusRef.current && statusRef.current !== 'all') {
-        params.set('status', statusRef.current)
-      }
-
-      const response = await fetch(`/api/workflows?${params.toString()}`)
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch workflows')
-      }
-
-      const data = (await response.json()) as WorkflowsData
+      const data: WorkflowsResponse = await fetchWorkflows(statusRef.current)
       setWorkflows(data.workflows)
       setStats(data.stats)
       setLastUpdate(new Date())
@@ -97,9 +75,9 @@ export function useRealtimeWorkflows(options: UseRealtimeWorkflowsOptions = {}) 
   // Initial fetch
   useEffect(() => {
     if (enabled) {
-      fetchWorkflows()
+      fetchWorkflowsData()
     }
-  }, [fetchWorkflows, enabled, status]) // Re-fetch when status filter changes
+  }, [fetchWorkflowsData, enabled, status]) // Re-fetch when status filter changes
 
   // Handle WebSocket events
   useEffect(() => {
@@ -175,7 +153,7 @@ export function useRealtimeWorkflows(options: UseRealtimeWorkflowsOptions = {}) 
       })
 
       // Refetch stats to get accurate counts
-      fetchWorkflows()
+      fetchWorkflowsData()
 
       setLastUpdate(new Date())
     }
@@ -208,12 +186,12 @@ export function useRealtimeWorkflows(options: UseRealtimeWorkflowsOptions = {}) 
       off(EVENTS.WORKFLOW_UPDATED, handleWorkflowUpdated)
       off(EVENTS.TASK_CREATED, handleTaskCreated)
     }
-  }, [isConnected, on, off, fetchWorkflows])
+  }, [isConnected, on, off, fetchWorkflowsData])
 
   const refresh = useCallback(() => {
     setIsLoading(true)
-    fetchWorkflows()
-  }, [fetchWorkflows])
+    fetchWorkflowsData()
+  }, [fetchWorkflowsData])
 
   return {
     workflows,

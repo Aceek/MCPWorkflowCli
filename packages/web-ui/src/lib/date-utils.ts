@@ -51,3 +51,23 @@ export function formatDuration(ms: number | null | undefined): string {
 
   return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`
 }
+
+/**
+ * Format a time for display (hours, minutes, seconds only)
+ * @param date - Date string or Date object
+ * @returns Formatted time string (e.g., "10:30:45")
+ */
+export function formatTime(date: Date | string | null | undefined): string {
+  if (!date) return '--:--:--'
+
+  const d = typeof date === 'string' ? new Date(date) : date
+  if (isNaN(d.getTime())) {
+    return '--:--:--'
+  }
+
+  return new Intl.DateTimeFormat('fr-FR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  }).format(d)
+}
