@@ -12,7 +12,8 @@ import {
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
-import { parseJsonArray } from '@/lib/json-parse'
+import { parseJsonArraySafe } from '@/lib/json-parse'
+import { StringArraySchema } from '@/lib/json-schemas'
 
 interface DecisionCardProps {
   decision: Decision
@@ -51,7 +52,7 @@ const categoryConfig: Record<
 
 export function DecisionCard({ decision }: DecisionCardProps) {
   const category = categoryConfig[decision.category] ?? categoryConfig.OTHER!
-  const optionsConsidered = parseJsonArray(decision.optionsConsidered)
+  const optionsConsidered = parseJsonArraySafe(decision.optionsConsidered, StringArraySchema)
 
   return (
     <motion.div

@@ -26,7 +26,8 @@ import { IssueCard } from './IssueCard'
 import { FilesList } from './FilesList'
 import { MilestoneTimeline } from './MilestoneTimeline'
 import { cn } from '@/lib/utils'
-import { parseJsonArray } from '@/lib/json-parse'
+import { parseJsonArraySafe } from '@/lib/json-parse'
+import { StringArraySchema } from '@/lib/json-schemas'
 import { formatTokens } from '@/lib/format-utils'
 
 type TaskWithRelations = Task & {
@@ -47,13 +48,13 @@ export function TaskCard({
   isSubtask = false,
 }: TaskCardProps) {
   // Parse JSON arrays (SQLite stores arrays as JSON strings)
-  const areas = parseJsonArray(task.areas)
-  const warnings = parseJsonArray(task.warnings)
-  const filesAdded = parseJsonArray(task.filesAdded)
-  const filesModified = parseJsonArray(task.filesModified)
-  const filesDeleted = parseJsonArray(task.filesDeleted)
-  const achievements = parseJsonArray(task.achievements)
-  const limitations = parseJsonArray(task.limitations)
+  const areas = parseJsonArraySafe(task.areas, StringArraySchema)
+  const warnings = parseJsonArraySafe(task.warnings, StringArraySchema)
+  const filesAdded = parseJsonArraySafe(task.filesAdded, StringArraySchema)
+  const filesModified = parseJsonArraySafe(task.filesModified, StringArraySchema)
+  const filesDeleted = parseJsonArraySafe(task.filesDeleted, StringArraySchema)
+  const achievements = parseJsonArraySafe(task.achievements, StringArraySchema)
+  const limitations = parseJsonArraySafe(task.limitations, StringArraySchema)
 
   const hasFiles =
     filesAdded.length > 0 ||
