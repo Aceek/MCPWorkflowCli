@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
-import { RealtimeWorkflowList } from '@/components/RealtimeWorkflowList'
-import { WorkflowCardSkeleton, StatsSkeleton } from '@/components/Skeleton'
+import { RealtimeWorkflowList } from '@/components/workflow/RealtimeWorkflowList'
+import { WorkflowCardSkeleton, StatsSkeleton } from '@/components/shared/Skeleton'
 
 export const dynamic = 'force-dynamic'
 

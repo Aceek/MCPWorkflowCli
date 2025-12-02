@@ -1,4 +1,4 @@
-import { WorkflowCardSkeleton, StatsSkeleton } from '@/components/Skeleton'
+import { WorkflowCardSkeleton, StatsSkeleton } from '@/components/shared/Skeleton'
 
 export default function Loading() {
   return (

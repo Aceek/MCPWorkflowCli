@@ -10,6 +10,12 @@ import { createHash } from 'crypto'
 import { readFile } from 'fs/promises'
 import { glob } from 'glob'
 import { GitError } from './errors.js'
+import { createLogger } from '@mcp-tracker/shared'
+
+/**
+ * Logger instance for Git snapshot operations
+ */
+const logger = createLogger('git-snapshot')
 
 export interface GitSnapshotResult {
   type: 'git' | 'checksum'
@@ -60,10 +66,9 @@ export async function createGitSnapshot(
       }
     }
   } catch (error) {
-    console.error(
-      '[git-snapshot] Failed to create Git snapshot, falling back to checksum:',
-      error instanceof Error ? error.message : error
-    )
+    logger.warn('Failed to create Git snapshot, falling back to checksum', {
+      error: error instanceof Error ? error.message : String(error),
+    })
     // Fall through to checksum snapshot
   }
 
@@ -97,10 +102,10 @@ async function createChecksumSnapshot(
       const hash = createHash('md5').update(content).digest('hex')
       checksums[file] = hash
     } catch (error) {
-      console.error(
-        `[git-snapshot] Failed to read file for checksum (${file}):`,
-        error instanceof Error ? error.message : error
-      )
+      logger.warn('Failed to read file for checksum', {
+        file,
+        error: error instanceof Error ? error.message : String(error),
+      })
       // Skip files that can't be read
     }
   }
@@ -162,10 +167,11 @@ async function getCommittedDiff(
     const diff = await git.diff([startHash, 'HEAD', '--name-status'])
     return parseDiffOutput(diff)
   } catch (error) {
-    console.error(
-      `[git-snapshot] Failed to get committed diff from ${startHash} to HEAD:`,
-      error instanceof Error ? error.message : error
-    )
+    logger.error('Failed to get committed diff', {
+      startHash,
+      targetHash: 'HEAD',
+      error: error instanceof Error ? error.message : String(error),
+    })
     // If diff fails (e.g., invalid hash), return empty
     return { added: [], modified: [], deleted: [] }
   }
@@ -185,10 +191,9 @@ async function getWorkingTreeDiff(git: SimpleGit): Promise<GitDiffResult> {
 
     return mergeDiffs(stagedResult, unstagedResult)
   } catch (error) {
-    console.error(
-      '[git-snapshot] Failed to get working tree diff:',
-      error instanceof Error ? error.message : error
-    )
+    logger.error('Failed to get working tree diff', {
+      error: error instanceof Error ? error.message : String(error),
+    })
     return { added: [], modified: [], deleted: [] }
   }
 }

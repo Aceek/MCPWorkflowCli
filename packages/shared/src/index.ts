@@ -1,8 +1,39 @@
 /**
- * @mcp-tracker/shared
+ * Shared package for MCP Workflow Tracker
  *
- * Shared types and Prisma client exports for MCP Workflow Tracker.
- * This package is the source of truth for database types.
+ * @packageDocumentation
+ * @module @mcp-tracker/shared
+ *
+ * @description
+ * This package serves as the **source of truth** for all database types and schemas
+ * in the MCP Workflow Tracker monorepo. It provides:
+ *
+ * - **Prisma Client**: Database ORM for SQLite with type-safe queries
+ * - **Database Models**: Workflow, Task, Decision, Issue, Milestone
+ * - **Type-Safe Enums**: Status and category enums for application-level type safety
+ *
+ * ## Database Provider
+ * - **SQLite**: Enums are stored as TEXT strings in the database
+ * - **Type Safety**: Enums defined here ensure compile-time validation in TypeScript
+ *
+ * ## Package Usage
+ * This package is consumed by:
+ * - `mcp-server`: MCP protocol implementation (backend logic)
+ * - `web-ui`: Next.js dashboard (frontend presentation)
+ *
+ * @example
+ * ```typescript
+ * import { PrismaClient, WorkflowStatus, TaskStatus } from '@mcp-tracker/shared'
+ *
+ * const prisma = new PrismaClient()
+ *
+ * const workflow = await prisma.workflow.create({
+ *   data: {
+ *     name: 'Feature Implementation',
+ *     status: WorkflowStatus.IN_PROGRESS
+ *   }
+ * })
+ * ```
  */
 
 // Re-export Prisma client and types
@@ -60,3 +91,16 @@ export const TestsStatus = {
   NOT_RUN: 'NOT_RUN',
 } as const
 export type TestsStatus = (typeof TestsStatus)[keyof typeof TestsStatus]
+
+// ============================================
+// LOGGER
+// Custom logging system for structured logs
+// ============================================
+
+export {
+  createLogger,
+  type Logger,
+  type LogLevel,
+  type LogEntry,
+  type LoggerOptions,
+} from './logger.js'

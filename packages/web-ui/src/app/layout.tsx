@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Activity, Github, BookOpen } from 'lucide-react'
-import { ThemeProvider } from '@/components/ThemeProvider'
-import { ThemeToggle } from '@/components/ThemeToggle'
+import { ThemeProvider } from '@/components/shared/ThemeProvider'
+import { ThemeToggle } from '@/components/shared/ThemeToggle'
 import { Tooltip } from '@/components/ui/tooltip'
 import './globals.css'
 

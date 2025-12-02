@@ -5,15 +5,16 @@ import type { Workflow, Task, Decision, Issue, Milestone } from '@prisma/client'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, Wifi, WifiOff, ClipboardList, Calendar, ListTodo, Clock, Zap } from 'lucide-react'
 import { useRealtimeWorkflow } from '@/hooks/useRealtimeWorkflow'
-import { StatusBadge } from './StatusBadge'
-import { TaskTree } from './TaskTree'
+import { StatusBadge } from '../shared/StatusBadge'
+import { TaskTree } from '../task/TaskTree'
 import { Card } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Tooltip } from '@/components/ui/tooltip'
 import { StaggerList, StaggerItem } from '@/components/ui/motion'
 import { cn } from '@/lib/utils'
-import { parseJsonArray } from '@/lib/json-parse'
+import { parseJsonArraySafe } from '@/lib/json-parse'
+import { WorkflowPlanSchema } from '@/lib/json-schemas'
 import { formatDate, formatDuration } from '@/lib/date-utils'
 import { formatTokens } from '@/lib/format-utils'
 
@@ -136,7 +137,7 @@ export function RealtimeWorkflowDetail({
       {/* Plan (if exists) */}
       <AnimatePresence>
         {(() => {
-          const plan = parseJsonArray<{ step: string; goal: string }>(workflow.plan)
+          const plan = parseJsonArraySafe(workflow.plan, WorkflowPlanSchema)
           return plan.length > 0 && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}

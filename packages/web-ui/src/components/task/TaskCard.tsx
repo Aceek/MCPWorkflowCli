@@ -20,7 +20,7 @@ import {
   CollapsibleTrigger,
   CollapsibleContent,
 } from '@/components/ui/collapsible'
-import { StatusBadge } from './StatusBadge'
+import { StatusBadge } from '../shared/StatusBadge'
 import { DecisionCard } from './DecisionCard'
 import { IssueCard } from './IssueCard'
 import { FilesList } from './FilesList'

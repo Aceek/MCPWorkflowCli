@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
-import { RealtimeWorkflowDetail } from '@/components/RealtimeWorkflowDetail'
+import { RealtimeWorkflowDetail } from '@/components/workflow/RealtimeWorkflowDetail'
 
 export const dynamic = 'force-dynamic'
 

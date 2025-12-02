@@ -5,14 +5,12 @@
  * These helpers handle serialization/deserialization transparently.
  */
 
+import { createLogger } from '@mcp-tracker/shared'
+
 /**
- * Log a warning to stderr (stdout is reserved for MCP protocol)
+ * Logger instance for JSON field operations
  */
-function logWarning(message: string, context?: Record<string, unknown>): void {
-  const timestamp = new Date().toISOString()
-  const contextStr = context ? ` ${JSON.stringify(context)}` : ''
-  console.error(`[json-fields] ${timestamp} WARN: ${message}${contextStr}`)
-}
+const logger = createLogger('json-fields')
 
 /**
  * Serialize an array to JSON string for SQLite storage
@@ -31,7 +29,7 @@ export function fromJsonArray<T>(json: string | null | undefined): T[] {
     const parsed = JSON.parse(json)
     return Array.isArray(parsed) ? parsed : []
   } catch (error) {
-    logWarning('Failed to parse JSON array, returning empty array', {
+    logger.warn('Failed to parse JSON array, returning empty array', {
       json: json.substring(0, 100), // Limite pour éviter les logs trop longs
       error: error instanceof Error ? error.message : String(error),
     })
@@ -55,7 +53,7 @@ export function fromJsonObject<T extends object>(json: string | null | undefined
   try {
     return JSON.parse(json) as T
   } catch (error) {
-    logWarning('Failed to parse JSON object, returning null', {
+    logger.warn('Failed to parse JSON object, returning null', {
       json: json.substring(0, 100),
       error: error instanceof Error ? error.message : String(error),
     })
@@ -200,7 +198,7 @@ export function workflowPlanFromJson(plan: string | null | undefined): unknown[]
   try {
     return JSON.parse(plan)
   } catch (error) {
-    logWarning('Failed to parse workflow plan, returning null', {
+    logger.warn('Failed to parse workflow plan, returning null', {
       plan: plan.substring(0, 100),
       error: error instanceof Error ? error.message : String(error),
     })
