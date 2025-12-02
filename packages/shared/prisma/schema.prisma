@@ -25,6 +25,10 @@ model Workflow {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  // Aggregated metrics (computed on task completion)
+  totalDurationMs Int? // Sum of all task durations
+  totalTokens     Int? // Sum of all tokens (input + output)
+
   tasks Task[]
 
   @@index([status])
@@ -65,6 +69,10 @@ model Task {
   packagesRemoved  String  @default("[]") // JSON array
   commandsExecuted String  @default("[]") // JSON array
   testsStatus      String? // TestsStatus enum
+
+  // Token metrics (reported by agent)
+  tokensInput  Int? // Input tokens used
+  tokensOutput Int? // Output tokens generated
 
   // Files changed
   filesAdded    String @default("[]") // JSON array

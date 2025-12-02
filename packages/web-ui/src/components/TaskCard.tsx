@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   XCircle,
   Eye,
+  Zap,
 } from 'lucide-react'
 import { Card, CardHeader, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -31,6 +32,17 @@ type TaskWithRelations = Task & {
   decisions: Decision[]
   issues: Issue[]
   milestones: Milestone[]
+}
+
+function formatTokens(tokens: number | null): string {
+  if (!tokens) return '-'
+  if (tokens >= 1000000) {
+    return `${(tokens / 1000000).toFixed(1)}M`
+  }
+  if (tokens >= 1000) {
+    return `${(tokens / 1000).toFixed(1)}k`
+  }
+  return tokens.toString()
 }
 
 interface TaskCardProps {
@@ -106,6 +118,12 @@ export function TaskCard({
               <span className="flex items-center gap-1">
                 <TestTube className="h-3.5 w-3.5" />
                 {task.testsStatus}
+              </span>
+            )}
+            {(task.tokensInput || task.tokensOutput) && (
+              <span className="flex items-center gap-1">
+                <Zap className="h-3.5 w-3.5" />
+                {formatTokens((task.tokensInput || 0) + (task.tokensOutput || 0))}
               </span>
             )}
           </div>

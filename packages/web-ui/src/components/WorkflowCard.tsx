@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import type { Workflow } from '@prisma/client'
 import { motion } from 'framer-motion'
-import { Calendar, ListTodo, ChevronRight } from 'lucide-react'
+import { Calendar, ListTodo, ChevronRight, Clock, Zap } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { StatusBadge } from './StatusBadge'
 import { cn } from '@/lib/utils'
@@ -29,6 +29,27 @@ function formatDate(date: Date | string): string {
     hour: '2-digit',
     minute: '2-digit',
   }).format(d)
+}
+
+function formatDuration(ms: number | null): string {
+  if (!ms) return '-'
+  const seconds = Math.floor(ms / 1000)
+  if (seconds < 60) return `${seconds}s`
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes}m ${seconds % 60}s`
+  const hours = Math.floor(minutes / 60)
+  return `${hours}h ${minutes % 60}m`
+}
+
+function formatTokens(tokens: number | null): string {
+  if (!tokens) return '-'
+  if (tokens >= 1000000) {
+    return `${(tokens / 1000000).toFixed(1)}M`
+  }
+  if (tokens >= 1000) {
+    return `${(tokens / 1000).toFixed(1)}k`
+  }
+  return tokens.toString()
 }
 
 export function WorkflowCard({ workflow, index = 0 }: WorkflowCardProps) {
@@ -67,13 +88,25 @@ export function WorkflowCard({ workflow, index = 0 }: WorkflowCardProps) {
             </div>
 
             {/* Meta info */}
-            <div className="mt-4 flex items-center gap-4 text-sm text-[hsl(var(--muted-foreground))]">
+            <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-[hsl(var(--muted-foreground))]">
               <span className="flex items-center gap-1.5">
                 <ListTodo className="h-4 w-4" />
                 <span>
                   {workflow._count.tasks} task{workflow._count.tasks !== 1 ? 's' : ''}
                 </span>
               </span>
+              {workflow.totalDurationMs && workflow.totalDurationMs > 0 && (
+                <span className="flex items-center gap-1.5">
+                  <Clock className="h-4 w-4" />
+                  <span>{formatDuration(workflow.totalDurationMs)}</span>
+                </span>
+              )}
+              {workflow.totalTokens && workflow.totalTokens > 0 && (
+                <span className="flex items-center gap-1.5">
+                  <Zap className="h-4 w-4" />
+                  <span>{formatTokens(workflow.totalTokens)} tokens</span>
+                </span>
+              )}
               <span className="flex items-center gap-1.5">
                 <Calendar className="h-4 w-4" />
                 <span>{formatDate(workflow.createdAt)}</span>

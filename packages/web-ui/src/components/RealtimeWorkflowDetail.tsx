@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import type { Workflow, Task, Decision, Issue, Milestone } from '@prisma/client'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Wifi, WifiOff, ClipboardList, Calendar, ListTodo } from 'lucide-react'
+import { ArrowLeft, Wifi, WifiOff, ClipboardList, Calendar, ListTodo, Clock, Zap } from 'lucide-react'
 import { useRealtimeWorkflow } from '@/hooks/useRealtimeWorkflow'
 import { StatusBadge } from './StatusBadge'
 import { TaskTree } from './TaskTree'
@@ -52,6 +52,17 @@ function formatDate(date: Date | string): string {
     hour: '2-digit',
     minute: '2-digit',
   }).format(d)
+}
+
+function formatTokens(tokens: number | null): string {
+  if (!tokens) return '-'
+  if (tokens >= 1000000) {
+    return `${(tokens / 1000000).toFixed(1)}M`
+  }
+  if (tokens >= 1000) {
+    return `${(tokens / 1000).toFixed(1)}k`
+  }
+  return tokens.toString()
 }
 
 export function RealtimeWorkflowDetail({
@@ -140,6 +151,18 @@ export function RealtimeWorkflowDetail({
             <ListTodo className="h-4 w-4" />
             {workflow.tasks.length} task{workflow.tasks.length !== 1 ? 's' : ''}
           </span>
+          {workflow.totalDurationMs && workflow.totalDurationMs > 0 && (
+            <span className="flex items-center gap-1.5">
+              <Clock className="h-4 w-4" />
+              Total: {formatDuration(workflow.totalDurationMs)}
+            </span>
+          )}
+          {workflow.totalTokens && workflow.totalTokens > 0 && (
+            <span className="flex items-center gap-1.5">
+              <Zap className="h-4 w-4" />
+              {formatTokens(workflow.totalTokens)} tokens
+            </span>
+          )}
         </div>
       </motion.div>
 
