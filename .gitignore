@@ -16,6 +16,10 @@ out/
 .env.test.local
 .env.production.local
 
+# Shared package env files
+packages/shared/.env
+packages/shared/.env.sqlite
+
 # Database
 *.db
 *.db-journal
