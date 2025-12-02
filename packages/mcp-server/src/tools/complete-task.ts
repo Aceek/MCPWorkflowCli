@@ -201,7 +201,7 @@ export async function handleCompleteTask(
   // Map status to Prisma enum
   const taskStatus = taskStatusMap[validated.status]
   if (!taskStatus) {
-    throw new Error(`Invalid status: ${validated.status}`)
+    throw new ValidationError(`Invalid task status: ${validated.status}`)
   }
 
   // Map tests status if provided

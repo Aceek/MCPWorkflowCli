@@ -7,7 +7,7 @@
 import { z } from 'zod'
 import { prisma } from '../db.js'
 import { emitIssueCreated } from '../websocket/index.js'
-import { NotFoundError } from '../utils/errors.js'
+import { NotFoundError, ValidationError } from '../utils/errors.js'
 import { issueTypeMap } from '../types/enums.js'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 
@@ -82,7 +82,7 @@ export async function handleLogIssue(args: unknown): Promise<CallToolResult> {
   // Map type string to Prisma enum
   const issueType = issueTypeMap[validated.type]
   if (!issueType) {
-    throw new Error(`Invalid issue type: ${validated.type}`)
+    throw new ValidationError(`Invalid issue type: ${validated.type}`)
   }
 
   // Create issue in database

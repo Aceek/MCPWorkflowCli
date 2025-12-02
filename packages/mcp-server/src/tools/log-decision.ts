@@ -7,7 +7,7 @@
 import { z } from 'zod'
 import { prisma } from '../db.js'
 import { emitDecisionCreated } from '../websocket/index.js'
-import { NotFoundError } from '../utils/errors.js'
+import { NotFoundError, ValidationError } from '../utils/errors.js'
 import { decisionCategoryMap } from '../types/enums.js'
 import { toJsonArray } from '../utils/json-fields.js'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
@@ -98,7 +98,7 @@ export async function handleLogDecision(
   // Map category string to Prisma enum
   const category = decisionCategoryMap[validated.category]
   if (!category) {
-    throw new Error(`Invalid category: ${validated.category}`)
+    throw new ValidationError(`Invalid decision category: ${validated.category}`)
   }
 
   // Create decision in database

@@ -61,7 +61,9 @@ function startHeartbeat(): void {
         data: { lastHeartbeat: new Date() },
       })
     } catch (error) {
-      // Silently ignore - server might be shutting down
+      logger.warn('Failed to update heartbeat', {
+        error: error instanceof Error ? error.message : String(error),
+      })
     }
   }, HEARTBEAT_INTERVAL_MS)
 
@@ -84,8 +86,10 @@ export async function unregisterServer(): Promise<void> {
       where: { id: 'singleton' },
     })
     logger.info('Unregistered server')
-  } catch {
-    // Ignore if already deleted
+  } catch (error) {
+    logger.warn('Failed to unregister server', {
+      error: error instanceof Error ? error.message : String(error),
+    })
   }
 }
 
