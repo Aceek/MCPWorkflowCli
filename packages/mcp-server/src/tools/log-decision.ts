@@ -8,26 +8,8 @@ import { z } from 'zod'
 import { prisma } from '../db.js'
 import { emitDecisionCreated } from '../websocket/index.js'
 import { NotFoundError } from '../utils/errors.js'
-import { toJsonArray } from '../utils/json-fields.js'
+import { decisionCategoryMap } from '../types/enums.js'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
-
-// SQLite: enums stored as strings
-const DecisionCategory = {
-  ARCHITECTURE: 'ARCHITECTURE',
-  LIBRARY_CHOICE: 'LIBRARY_CHOICE',
-  TRADE_OFF: 'TRADE_OFF',
-  WORKAROUND: 'WORKAROUND',
-  OTHER: 'OTHER',
-} as const
-
-// Map input strings to enum values
-const categoryMap: Record<string, string> = {
-  architecture: DecisionCategory.ARCHITECTURE,
-  library_choice: DecisionCategory.LIBRARY_CHOICE,
-  trade_off: DecisionCategory.TRADE_OFF,
-  workaround: DecisionCategory.WORKAROUND,
-  other: DecisionCategory.OTHER,
-}
 
 // Zod schema for validation
 const logDecisionSchema = z.object({
@@ -113,18 +95,18 @@ export async function handleLogDecision(
   }
 
   // Map category string to Prisma enum
-  const category = categoryMap[validated.category]
+  const category = decisionCategoryMap[validated.category]
   if (!category) {
     throw new Error(`Invalid category: ${validated.category}`)
   }
 
-  // Create decision in database (SQLite: arrays as JSON strings)
+  // Create decision in database
   const decision = await prisma.decision.create({
     data: {
       taskId: validated.task_id,
       category,
       question: validated.question,
-      optionsConsidered: toJsonArray(validated.options_considered),
+      optionsConsidered: validated.options_considered ?? [],
       chosen: validated.chosen,
       reasoning: validated.reasoning,
       tradeOffs: validated.trade_offs,

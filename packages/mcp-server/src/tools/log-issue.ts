@@ -8,25 +8,8 @@ import { z } from 'zod'
 import { prisma } from '../db.js'
 import { emitIssueCreated } from '../websocket/index.js'
 import { NotFoundError } from '../utils/errors.js'
+import { issueTypeMap } from '../types/enums.js'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
-
-// SQLite: enums stored as strings
-const IssueType = {
-  DOC_GAP: 'DOC_GAP',
-  BUG: 'BUG',
-  DEPENDENCY_CONFLICT: 'DEPENDENCY_CONFLICT',
-  UNCLEAR_REQUIREMENT: 'UNCLEAR_REQUIREMENT',
-  OTHER: 'OTHER',
-} as const
-
-// Map input strings to enum values
-const issueTypeMap: Record<string, string> = {
-  documentation_gap: IssueType.DOC_GAP,
-  bug_encountered: IssueType.BUG,
-  dependency_conflict: IssueType.DEPENDENCY_CONFLICT,
-  unclear_requirement: IssueType.UNCLEAR_REQUIREMENT,
-  other: IssueType.OTHER,
-}
 
 // Zod schema for validation
 const logIssueSchema = z.object({

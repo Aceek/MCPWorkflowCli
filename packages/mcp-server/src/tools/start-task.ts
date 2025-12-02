@@ -10,22 +10,8 @@ import { prisma } from '../db.js'
 import { createGitSnapshot } from '../utils/git-snapshot.js'
 import { emitTaskCreated, emitWorkflowUpdated } from '../websocket/index.js'
 import { NotFoundError } from '../utils/errors.js'
-import { toJsonArray, toJsonObject } from '../utils/json-fields.js'
+import { WorkflowStatus, TaskStatus } from '../types/enums.js'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
-
-// SQLite: enums stored as strings
-const TaskStatus = {
-  IN_PROGRESS: 'IN_PROGRESS',
-  SUCCESS: 'SUCCESS',
-  PARTIAL_SUCCESS: 'PARTIAL_SUCCESS',
-  FAILED: 'FAILED',
-} as const
-
-const WorkflowStatus = {
-  IN_PROGRESS: 'IN_PROGRESS',
-  COMPLETED: 'COMPLETED',
-  FAILED: 'FAILED',
-} as const
 
 // Zod schema for validation
 const startTaskSchema = z.object({
@@ -107,10 +93,10 @@ export async function handleStartTask(args: unknown): Promise<CallToolResult> {
       parentTaskId: validated.parent_task_id,
       name: validated.name,
       goal: validated.goal,
-      areas: toJsonArray(validated.areas),
+      areas: validated.areas ?? [],
       snapshotId: snapshot.id,
       snapshotType: snapshot.type,
-      snapshotData: toJsonObject(snapshot.data),
+      snapshotData: snapshot.data as any,
       status: TaskStatus.IN_PROGRESS,
     },
   })

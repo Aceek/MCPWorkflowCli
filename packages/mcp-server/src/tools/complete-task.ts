@@ -14,35 +14,13 @@ import {
 } from '../utils/git-snapshot.js'
 import { emitTaskUpdated, emitWorkflowUpdated } from '../websocket/index.js'
 import { NotFoundError, ValidationError } from '../utils/errors.js'
-import { toJsonArray, fromJsonArray, fromJsonObject } from '../utils/json-fields.js'
+import {
+  taskStatusMap,
+  testsStatusMap,
+  TaskStatus,
+  WorkflowStatus,
+} from '../types/enums.js'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
-
-// SQLite: enums stored as strings
-const TaskStatus = {
-  IN_PROGRESS: 'IN_PROGRESS',
-  SUCCESS: 'SUCCESS',
-  PARTIAL_SUCCESS: 'PARTIAL_SUCCESS',
-  FAILED: 'FAILED',
-} as const
-
-const TestsStatus = {
-  PASSED: 'PASSED',
-  FAILED: 'FAILED',
-  NOT_RUN: 'NOT_RUN',
-} as const
-
-// Map input strings to enum values
-const statusMap: Record<string, string> = {
-  success: TaskStatus.SUCCESS,
-  partial_success: TaskStatus.PARTIAL_SUCCESS,
-  failed: TaskStatus.FAILED,
-}
-
-const testsStatusMap: Record<string, string> = {
-  passed: TestsStatus.PASSED,
-  failed: TestsStatus.FAILED,
-  not_run: TestsStatus.NOT_RUN,
-}
 
 // Zod schema for validation
 const completeTaskSchema = z.object({
@@ -199,8 +177,8 @@ export async function handleCompleteTask(
   let filesDeleted: string[] = []
 
   if (task.snapshotType === 'git' && task.snapshotData) {
-    // SQLite: snapshotData is stored as JSON string
-    const snapshotData = fromJsonObject<GitSnapshotData>(task.snapshotData as string)
+    // PostgreSQL: snapshotData is stored as native Json type
+    const snapshotData = task.snapshotData as unknown as GitSnapshotData
     if (snapshotData?.gitHash) {
       const diff = await computeGitDiff(snapshotData.gitHash)
       filesAdded = diff.added
@@ -209,24 +187,24 @@ export async function handleCompleteTask(
     }
   }
 
-  // Verify scope (SQLite: areas stored as JSON string)
+  // Verify scope
   const allChangedFiles = [...filesAdded, ...filesModified, ...filesDeleted]
-  const taskAreas = fromJsonArray<string>(task.areas as string)
+  const taskAreas = task.areas
   const scopeVerification = verifyScope(allChangedFiles, taskAreas)
 
   // Map status to Prisma enum
-  const taskStatus = statusMap[validated.status]
+  const taskStatus = taskStatusMap[validated.status]
   if (!taskStatus) {
     throw new Error(`Invalid status: ${validated.status}`)
   }
 
   // Map tests status if provided
-  let testsStatus: string | undefined
+  let testsStatus = null
   if (validated.metadata?.tests_status) {
-    testsStatus = testsStatusMap[validated.metadata.tests_status]
+    testsStatus = testsStatusMap[validated.metadata.tests_status] ?? null
   }
 
-  // Update task in database (SQLite: arrays stored as JSON strings)
+  // Update task in database
   const updatedTask = await prisma.task.update({
     where: { id: validated.task_id },
     data: {
@@ -234,23 +212,23 @@ export async function handleCompleteTask(
       completedAt,
       durationMs,
       summary: validated.outcome.summary,
-      achievements: toJsonArray(validated.outcome.achievements),
-      limitations: toJsonArray(validated.outcome.limitations),
+      achievements: validated.outcome.achievements ?? [],
+      limitations: validated.outcome.limitations ?? [],
       manualReviewNeeded: validated.outcome.manual_review_needed ?? false,
       manualReviewReason: validated.outcome.manual_review_reason,
-      nextSteps: toJsonArray(validated.outcome.next_steps),
-      packagesAdded: toJsonArray(validated.metadata?.packages_added),
-      packagesRemoved: toJsonArray(validated.metadata?.packages_removed),
-      commandsExecuted: toJsonArray(validated.metadata?.commands_executed),
+      nextSteps: validated.outcome.next_steps ?? [],
+      packagesAdded: validated.metadata?.packages_added ?? [],
+      packagesRemoved: validated.metadata?.packages_removed ?? [],
+      commandsExecuted: validated.metadata?.commands_executed ?? [],
       testsStatus,
       tokensInput: validated.metadata?.tokens_input,
       tokensOutput: validated.metadata?.tokens_output,
-      filesAdded: toJsonArray(filesAdded),
-      filesModified: toJsonArray(filesModified),
-      filesDeleted: toJsonArray(filesDeleted),
+      filesAdded,
+      filesModified,
+      filesDeleted,
       scopeMatch: scopeVerification.scopeMatch,
-      unexpectedFiles: toJsonArray(scopeVerification.unexpectedFiles),
-      warnings: toJsonArray(scopeVerification.warnings),
+      unexpectedFiles: scopeVerification.unexpectedFiles,
+      warnings: scopeVerification.warnings,
     },
   })
 
@@ -290,14 +268,6 @@ export async function handleCompleteTask(
     ],
   }
 }
-
-// Workflow status constants
-const WorkflowStatus = {
-  IN_PROGRESS: 'IN_PROGRESS',
-  COMPLETED: 'COMPLETED',
-  PARTIAL_SUCCESS: 'PARTIAL_SUCCESS',
-  FAILED: 'FAILED',
-} as const
 
 /**
  * Check if all tasks in a workflow are complete and update workflow status.
@@ -349,12 +319,12 @@ async function checkAndUpdateWorkflowStatus(
     (task) => task.status === TaskStatus.PARTIAL_SUCCESS
   )
 
-  let newStatus: string
-  if (anyFailed) {
+  let newStatus: WorkflowStatus
+  if (anyFailed || anyPartialSuccess) {
+    // If any task failed or had partial success, mark workflow as FAILED
     newStatus = WorkflowStatus.FAILED
-  } else if (anyPartialSuccess) {
-    newStatus = WorkflowStatus.PARTIAL_SUCCESS
   } else {
+    // All tasks succeeded
     newStatus = WorkflowStatus.COMPLETED
   }
 
