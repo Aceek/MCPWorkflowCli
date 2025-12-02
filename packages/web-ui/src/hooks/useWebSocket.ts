@@ -1,7 +1,13 @@
 'use client'
 
 import { useEffect, useRef, useCallback, useState } from 'react'
-import { getSocket, EVENTS, type EventName } from '@/lib/socket'
+import {
+  getSocketAsync,
+  startPortDiscovery,
+  stopPortDiscovery,
+  EVENTS,
+  type EventName,
+} from '@/lib/socket'
 import type { Socket } from 'socket.io-client'
 
 export type ConnectionStatus = 'connecting' | 'connected' | 'disconnected' | 'error'
@@ -38,44 +44,66 @@ export function useWebSocket(options: UseWebSocketOptions = {}): UseWebSocketRet
 
   // Initialize socket connection
   useEffect(() => {
-    const socket = getSocket()
-    socketRef.current = socket
+    let mounted = true
 
-    // Connection event handlers
-    const handleConnect = () => {
-      setStatus('connected')
+    const initializeSocket = async () => {
+      const socket = await getSocketAsync()
+
+      if (!mounted) return
+
+      if (!socket) {
+        setStatus('error')
+        return
+      }
+
+      socketRef.current = socket
+
+      // Connection event handlers
+      const handleConnect = () => {
+        if (mounted) setStatus('connected')
+      }
+
+      const handleDisconnect = () => {
+        if (mounted) setStatus('disconnected')
+      }
+
+      const handleConnectError = () => {
+        if (mounted) setStatus('error')
+      }
+
+      const handleConnecting = () => {
+        if (mounted) setStatus('connecting')
+      }
+
+      socket.on('connect', handleConnect)
+      socket.on('disconnect', handleDisconnect)
+      socket.on('connect_error', handleConnectError)
+      socket.io.on('reconnect_attempt', handleConnecting)
+
+      // Set initial status
+      if (socket.connected) {
+        setStatus('connected')
+      } else if (autoConnect) {
+        setStatus('connecting')
+        socket.connect()
+      }
+
+      // Start port discovery for automatic reconnection
+      startPortDiscovery()
     }
 
-    const handleDisconnect = () => {
-      setStatus('disconnected')
-    }
-
-    const handleConnectError = () => {
-      setStatus('error')
-    }
-
-    const handleConnecting = () => {
-      setStatus('connecting')
-    }
-
-    socket.on('connect', handleConnect)
-    socket.on('disconnect', handleDisconnect)
-    socket.on('connect_error', handleConnectError)
-    socket.io.on('reconnect_attempt', handleConnecting)
-
-    // Set initial status
-    if (socket.connected) {
-      setStatus('connected')
-    } else if (autoConnect) {
-      setStatus('connecting')
-      socket.connect()
-    }
+    initializeSocket()
 
     return () => {
-      socket.off('connect', handleConnect)
-      socket.off('disconnect', handleDisconnect)
-      socket.off('connect_error', handleConnectError)
-      socket.io.off('reconnect_attempt', handleConnecting)
+      mounted = false
+      stopPortDiscovery()
+      const socket = socketRef.current
+      if (socket) {
+        socket.off('connect')
+        socket.off('disconnect')
+        socket.off('connect_error')
+        socket.io.off('reconnect_attempt')
+      }
     }
   }, [autoConnect])
 

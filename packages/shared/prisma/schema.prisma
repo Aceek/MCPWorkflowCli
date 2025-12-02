@@ -142,3 +142,15 @@ model Milestone {
   @@index([taskId])
   @@index([createdAt])
 }
+
+// ============================================
+// SERVER INFO (WebSocket Port Discovery)
+// ============================================
+
+model ServerInfo {
+  id            String   @id @default("singleton") // Always "singleton" - single entry
+  websocketPort Int
+  startedAt     DateTime @default(now())
+  lastHeartbeat DateTime @default(now())
+  processId     Int?     // PID for debugging
+}

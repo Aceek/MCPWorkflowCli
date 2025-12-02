@@ -2,11 +2,10 @@
  * Socket.io Client Configuration
  *
  * Provides a singleton socket instance for real-time communication.
+ * Discovers the WebSocket port dynamically from the database.
  */
 
 import { io, Socket } from 'socket.io-client'
-
-const WEBSOCKET_URL = process.env.NEXT_PUBLIC_WEBSOCKET_URL ?? 'http://localhost:3002'
 
 // Event types (must match server-side events.ts)
 export const EVENTS = {
@@ -23,16 +22,55 @@ export const EVENTS = {
 export type EventName = (typeof EVENTS)[keyof typeof EVENTS]
 
 let socket: Socket | null = null
+let currentPort: number | null = null
+let discoveryInterval: NodeJS.Timeout | null = null
+
+const DISCOVERY_INTERVAL_MS = 5000 // Check for port changes every 5s
+
+/**
+ * Fetch the current WebSocket port from the API.
+ */
+async function discoverPort(): Promise<number | null> {
+  try {
+    const response = await fetch('/api/websocket-port')
+    if (!response.ok) {
+      return null
+    }
+    const data = await response.json()
+    return data.port ?? null
+  } catch {
+    return null
+  }
+}
 
 /**
  * Get or create the Socket.io client instance.
- * This is a singleton - only one connection per client.
+ * Connects to the dynamically discovered port.
  */
-export function getSocket(): Socket {
+export async function getSocketAsync(): Promise<Socket | null> {
+  const port = await discoverPort()
+
+  if (!port) {
+    console.warn('[WebSocket] No active server found')
+    return null
+  }
+
+  // If port changed, reconnect
+  if (socket && currentPort !== port) {
+    console.log(
+      `[WebSocket] Port changed from ${currentPort} to ${port}, reconnecting...`
+    )
+    socket.disconnect()
+    socket = null
+  }
+
   if (!socket) {
-    socket = io(WEBSOCKET_URL, {
+    currentPort = port
+    const url = `http://localhost:${port}`
+
+    socket = io(url, {
       transports: ['websocket', 'polling'],
-      autoConnect: false, // We'll connect manually
+      autoConnect: false,
       reconnection: true,
       reconnectionAttempts: 10,
       reconnectionDelay: 1000,
@@ -42,7 +80,7 @@ export function getSocket(): Socket {
     // Debug logging in development
     if (process.env.NODE_ENV === 'development') {
       socket.on('connect', () => {
-        console.log('[WebSocket] Connected:', socket?.id)
+        console.log(`[WebSocket] Connected to port ${port}:`, socket?.id)
       })
 
       socket.on('disconnect', (reason) => {
@@ -59,11 +97,55 @@ export function getSocket(): Socket {
 }
 
 /**
+ * Get socket synchronously (may return null if not initialized).
+ * Use getSocketAsync() for initial connection.
+ */
+export function getSocket(): Socket | null {
+  return socket
+}
+
+/**
+ * Start periodic port discovery.
+ * Reconnects automatically if the server port changes.
+ */
+export function startPortDiscovery(): void {
+  if (discoveryInterval) return
+
+  discoveryInterval = setInterval(async () => {
+    const newPort = await discoverPort()
+
+    if (newPort && newPort !== currentPort && socket) {
+      console.log(
+        `[WebSocket] Server port changed to ${newPort}, reconnecting...`
+      )
+      socket.disconnect()
+      socket = null
+      const reconnectedSocket = await getSocketAsync()
+      if (reconnectedSocket) {
+        reconnectedSocket.connect()
+      }
+    }
+  }, DISCOVERY_INTERVAL_MS)
+}
+
+/**
+ * Stop port discovery.
+ */
+export function stopPortDiscovery(): void {
+  if (discoveryInterval) {
+    clearInterval(discoveryInterval)
+    discoveryInterval = null
+  }
+}
+
+/**
  * Disconnect and cleanup the socket.
  */
 export function disconnectSocket(): void {
+  stopPortDiscovery()
   if (socket) {
     socket.disconnect()
     socket = null
+    currentPort = null
   }
 }

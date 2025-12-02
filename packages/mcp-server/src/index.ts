@@ -42,6 +42,12 @@ import { McpError, ValidationError, NotFoundError } from './utils/errors.js'
 // Import WebSocket server
 import { getWebSocketServer } from './websocket/index.js'
 
+// Import server registry
+import {
+  registerServerPort,
+  unregisterServer,
+} from './utils/server-registry.js'
+
 const MCP_SERVER_NAME = 'mcp-workflow-tracker'
 const MCP_SERVER_VERSION = '1.0.0'
 
@@ -180,12 +186,15 @@ async function main(): Promise<void> {
   const wsPort = await wsServer.start()
   if (wsPort) {
     console.error(`[MCP] WebSocket available on port ${wsPort}`)
+    // Register port in database for Web UI discovery
+    await registerServerPort(wsPort)
   } else {
     console.error('[MCP] WebSocket unavailable - real-time updates disabled')
   }
 
   // Handle graceful shutdown
   const shutdown = async () => {
+    await unregisterServer()
     await wsServer.stop()
     await server.close()
     process.exit(0)
