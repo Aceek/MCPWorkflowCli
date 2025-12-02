@@ -93,14 +93,8 @@ export const TestsStatus = {
 export type TestsStatus = (typeof TestsStatus)[keyof typeof TestsStatus]
 
 // ============================================
-// LOGGER
-// Custom logging system for structured logs
+// LOGGER TYPES
+// Type definitions only (implementations in mcp-server and web-ui)
 // ============================================
 
-export {
-  createLogger,
-  type Logger,
-  type LogLevel,
-  type LogEntry,
-  type LoggerOptions,
-} from './logger.js'
+export type { Logger, LogLevel, LogEntry, LoggerOptions } from './logger.js'

@@ -18,7 +18,7 @@ import {
   type CallToolResult,
 } from '@modelcontextprotocol/sdk/types.js'
 import { ZodError } from 'zod'
-import { createLogger } from '@mcp-tracker/shared'
+import { createLogger } from './utils/logger.js'
 
 // Import tool definitions and handlers
 import {

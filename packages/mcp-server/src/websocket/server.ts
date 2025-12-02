@@ -7,7 +7,7 @@
 
 import { Server as HttpServer, createServer } from 'http'
 import { Server as SocketIOServer, Socket } from 'socket.io'
-import { createLogger } from '@mcp-tracker/shared'
+import { createLogger } from '../utils/logger.js'
 
 const logger = createLogger('websocket-server')
 

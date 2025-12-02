@@ -6,7 +6,7 @@
  */
 
 import { prisma } from '../db.js'
-import { createLogger } from '@mcp-tracker/shared'
+import { createLogger } from './logger.js'
 
 const logger = createLogger('server-registry')
 

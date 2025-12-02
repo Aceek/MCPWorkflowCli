@@ -1,8 +1,8 @@
 /**
- * Custom Logger System for Web UI
+ * Custom Logger System for MCP Server
  *
- * Lightweight, structured logging system for browser environments.
- * Uses console methods appropriate for client-side logging.
+ * Lightweight, structured logging system compatible with MCP protocol.
+ * Uses stderr for logs (stdout is reserved for MCP JSON-RPC protocol).
  */
 
 /**
@@ -43,7 +43,7 @@ export interface LoggerOptions {
 
   /**
    * Custom output function
-   * @default Outputs to appropriate console method
+   * @default Outputs to stderr
    */
   output?: (entry: LogEntry) => void
 }
@@ -68,40 +68,25 @@ function formatLogEntry(entry: LogEntry): string {
 }
 
 /**
- * Default output function (uses appropriate console method)
+ * Default output function (stderr)
  */
 function defaultOutput(entry: LogEntry): void {
-  const message = formatLogEntry(entry)
-
-  // Use the appropriate console method for the log level
-  switch (entry.level) {
-    case 'debug':
-      console.debug(message)
-      break
-    case 'info':
-      console.info(message)
-      break
-    case 'warn':
-      console.warn(message)
-      break
-    case 'error':
-      console.error(message)
-      break
-  }
+  // Use console.error for stderr output (stdout is reserved for MCP protocol)
+  console.error(formatLogEntry(entry))
 }
 
 /**
  * Create a logger instance for a specific module
  *
- * @param module - Module name (e.g., 'socket', 'api', 'ui')
+ * @param module - Module name (e.g., 'git-snapshot', 'json-fields')
  * @param options - Logger configuration options
  * @returns Logger instance
  *
  * @example
  * ```typescript
- * const logger = createLogger('socket')
- * logger.info('Connected to WebSocket', { port: 3002 })
- * // Output: [2025-12-02T10:30:45.123Z] [INFO] [socket] Connected to WebSocket {"port":3002}
+ * const logger = createLogger('git-snapshot')
+ * logger.warn('Failed to create Git snapshot', { error: 'Not a git repo' })
+ * // Output: [2025-12-02T10:30:45.123Z] [WARN] [git-snapshot] Failed to create Git snapshot {"error":"Not a git repo"}
  * ```
  */
 export function createLogger(module: string, options?: LoggerOptions): Logger {

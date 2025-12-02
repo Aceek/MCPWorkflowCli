@@ -5,7 +5,7 @@
  * These helpers handle serialization/deserialization transparently.
  */
 
-import { createLogger } from '@mcp-tracker/shared'
+import { createLogger } from './logger.js'
 
 /**
  * Logger instance for JSON field operations

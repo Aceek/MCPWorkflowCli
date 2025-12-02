@@ -10,7 +10,7 @@ import { createHash } from 'crypto'
 import { readFile } from 'fs/promises'
 import { glob } from 'glob'
 import { GitError } from './errors.js'
-import { createLogger } from '@mcp-tracker/shared'
+import { createLogger } from './logger.js'
 
 /**
  * Logger instance for Git snapshot operations

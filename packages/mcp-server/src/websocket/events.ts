@@ -12,7 +12,7 @@ import type {
   Milestone,
 } from '@prisma/client'
 import { getIO } from './server.js'
-import { createLogger } from '@mcp-tracker/shared'
+import { createLogger } from '../utils/logger.js'
 
 const logger = createLogger('websocket-events')
 
