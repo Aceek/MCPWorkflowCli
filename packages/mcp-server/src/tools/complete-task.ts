@@ -177,8 +177,10 @@ export async function handleCompleteTask(
   let filesDeleted: string[] = []
 
   if (task.snapshotType === 'git' && task.snapshotData) {
-    // PostgreSQL: snapshotData is stored as native Json type
-    const snapshotData = task.snapshotData as unknown as GitSnapshotData
+    // SQLite: snapshotData is stored as JSON string
+    const snapshotData: GitSnapshotData | null = task.snapshotData
+      ? JSON.parse(task.snapshotData)
+      : null
     if (snapshotData?.gitHash) {
       const diff = await computeGitDiff(snapshotData.gitHash)
       filesAdded = diff.added
@@ -189,7 +191,8 @@ export async function handleCompleteTask(
 
   // Verify scope
   const allChangedFiles = [...filesAdded, ...filesModified, ...filesDeleted]
-  const taskAreas = task.areas
+  // SQLite: areas is stored as JSON string
+  const taskAreas: string[] = task.areas ? JSON.parse(task.areas) : []
   const scopeVerification = verifyScope(allChangedFiles, taskAreas)
 
   // Map status to Prisma enum
@@ -212,23 +215,23 @@ export async function handleCompleteTask(
       completedAt,
       durationMs,
       summary: validated.outcome.summary,
-      achievements: validated.outcome.achievements ?? [],
-      limitations: validated.outcome.limitations ?? [],
+      achievements: JSON.stringify(validated.outcome.achievements ?? []),
+      limitations: JSON.stringify(validated.outcome.limitations ?? []),
       manualReviewNeeded: validated.outcome.manual_review_needed ?? false,
       manualReviewReason: validated.outcome.manual_review_reason,
-      nextSteps: validated.outcome.next_steps ?? [],
-      packagesAdded: validated.metadata?.packages_added ?? [],
-      packagesRemoved: validated.metadata?.packages_removed ?? [],
-      commandsExecuted: validated.metadata?.commands_executed ?? [],
+      nextSteps: JSON.stringify(validated.outcome.next_steps ?? []),
+      packagesAdded: JSON.stringify(validated.metadata?.packages_added ?? []),
+      packagesRemoved: JSON.stringify(validated.metadata?.packages_removed ?? []),
+      commandsExecuted: JSON.stringify(validated.metadata?.commands_executed ?? []),
       testsStatus,
       tokensInput: validated.metadata?.tokens_input,
       tokensOutput: validated.metadata?.tokens_output,
-      filesAdded,
-      filesModified,
-      filesDeleted,
+      filesAdded: JSON.stringify(filesAdded),
+      filesModified: JSON.stringify(filesModified),
+      filesDeleted: JSON.stringify(filesDeleted),
       scopeMatch: scopeVerification.scopeMatch,
-      unexpectedFiles: scopeVerification.unexpectedFiles,
-      warnings: scopeVerification.warnings,
+      unexpectedFiles: JSON.stringify(scopeVerification.unexpectedFiles),
+      warnings: JSON.stringify(scopeVerification.warnings),
     },
   })
 

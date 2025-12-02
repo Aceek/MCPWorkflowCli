@@ -106,7 +106,7 @@ export async function handleLogDecision(
       taskId: validated.task_id,
       category,
       question: validated.question,
-      optionsConsidered: validated.options_considered ?? [],
+      optionsConsidered: JSON.stringify(validated.options_considered ?? []),
       chosen: validated.chosen,
       reasoning: validated.reasoning,
       tradeOffs: validated.trade_offs,

@@ -93,10 +93,10 @@ export async function handleStartTask(args: unknown): Promise<CallToolResult> {
       parentTaskId: validated.parent_task_id,
       name: validated.name,
       goal: validated.goal,
-      areas: validated.areas ?? [],
+      areas: JSON.stringify(validated.areas ?? []),
       snapshotId: snapshot.id,
       snapshotType: snapshot.type,
-      snapshotData: snapshot.data as any,
+      snapshotData: JSON.stringify(snapshot.data),
       status: TaskStatus.IN_PROGRESS,
     },
   })

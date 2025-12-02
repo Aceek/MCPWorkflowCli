@@ -10,7 +10,6 @@ import { prisma } from '../db.js'
 import { emitMilestoneCreated } from '../websocket/index.js'
 import { NotFoundError } from '../utils/errors.js'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
-import type { Prisma } from '@prisma/client'
 
 // Zod schema for validation
 const logMilestoneSchema = z.object({
@@ -72,7 +71,7 @@ export async function handleLogMilestone(
       taskId: validated.task_id,
       message: validated.message,
       progress: validated.progress,
-      metadata: (validated.metadata as Prisma.InputJsonValue) ?? undefined,
+      metadata: validated.metadata ? JSON.stringify(validated.metadata) : null,
     },
   })
 

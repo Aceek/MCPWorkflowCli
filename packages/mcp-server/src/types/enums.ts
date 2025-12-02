@@ -2,9 +2,9 @@
  * Enum Type Conversions for MCP Workflow Tracker
  *
  * This module centralizes the conversion between MCP input formats (snake_case)
- * and Prisma native enums (SCREAMING_CASE) for PostgreSQL.
+ * and application enums (SCREAMING_CASE).
  *
- * The Prisma schema now uses native PostgreSQL enums for type safety.
+ * SQLite stores enums as strings. Type safety is provided by @mcp-tracker/shared.
  */
 
 import {
@@ -13,7 +13,7 @@ import {
   DecisionCategory,
   IssueType,
   TestsStatus,
-} from '@prisma/client'
+} from '@mcp-tracker/shared'
 
 // ============================================
 // CONVERSION MAPS (MCP Input -> Prisma Enum)
