@@ -36,7 +36,7 @@ Agent AI (Claude Code)
         ↓
     MCP Client
         ↓ stdio
-    MCP Server ←→ PostgreSQL
+    MCP Server ←→ SQLite (local file)
 ```
 
 **Caractéristiques :**
@@ -60,7 +60,7 @@ packages/shared/
 │   └── index.ts           # Export types Prisma
 ├── package.json
 ├── tsconfig.json
-└── .env                   # DATABASE_PROVIDER + DATABASE_URL
+└── .env                   # DATABASE_URL
 ```
 
 **Responsabilités :**
@@ -193,7 +193,7 @@ packages/web-ui/
 MCP Server                Web UI
      │                       │
      │  DB Write (Prisma)    │
-     ├─────────────→ PostgreSQL
+     ├─────────────→ SQLite (local file)
      │                       │
      │  Emit WebSocket       │
      ├───────────────────────→│

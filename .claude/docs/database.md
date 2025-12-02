@@ -2,9 +2,13 @@
 
 ## Vue d'ensemble
 
-Le schéma utilise **Prisma ORM** pour supporter **deux bases de données** :
-- **PostgreSQL** (recommandé pour Phase 1)
-- **SQLite** (pour distribution standalone future)
+Le schéma utilise **Prisma ORM** avec **SQLite** comme base de données.
+
+**Caractéristiques** :
+- Fichier local portable (pas de serveur DB requis)
+- Enums Prisma stockés comme TEXT avec validation app-side
+- Arrays stockés comme JSON strings
+- Type safety TypeScript conservé via le client Prisma généré
 
 ---
 
@@ -18,7 +22,7 @@ generator client {
 }
 
 datasource db {
-  provider = env("DATABASE_PROVIDER") // "postgresql" ou "sqlite"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -188,61 +192,31 @@ model Milestone {
 
 ---
 
-## Support Multi-DB (PostgreSQL / SQLite)
+## Configuration SQLite
 
-### Configuration
-
-Le schéma supporte **deux bases de données** via des variables d'environnement.
-
-#### PostgreSQL (Recommandé pour Phase 1)
+### Variables d'environnement
 
 ```bash
 # packages/shared/.env
-DATABASE_PROVIDER="postgresql"
-DATABASE_URL="postgresql://user:password@localhost:5432/mcp_tracker?schema=public"
-```
-
-**Avantages :**
-- ✅ Support natif des enums (type safety DB)
-- ✅ Performance optimale pour gros volumes
-- ✅ Transactions robustes (ACID)
-- ✅ Indexes avancés
-- ✅ Relations complexes
-
-**Cas d'usage :** Développement local, production, Docker
-
-#### SQLite (Support futur - Distribution standalone)
-
-```bash
-# packages/shared/.env
-DATABASE_PROVIDER="sqlite"
 DATABASE_URL="file:./dev.db"
 ```
 
-**Avantages :**
-- ✅ Pas de serveur DB à installer
-- ✅ Fichier unique portable
-- ✅ Idéal pour distribution npm/binaire
+**Caractéristiques SQLite** :
+- ✅ Aucun serveur DB à installer
+- ✅ Fichier unique portable (dev.db)
+- ✅ Idéal pour distribution npm/binaire standalone
+- ✅ Type safety TypeScript conservé via Prisma
 
-**Limitations :**
-- ⚠️ Pas d'enums natifs (Prisma les émule avec des strings + validation)
-- ⚠️ Moins performant sur gros volumes
-- ⚠️ Pas de support `@db.Text` (converti en `TEXT`)
-
-**Cas d'usage :** Distribution standalone, dev sans Docker
-
-### Gestion des Enums avec SQLite
+### Gestion des Enums
 
 Prisma gère automatiquement la conversion des enums pour SQLite :
-
-- **PostgreSQL** : Les enums sont créés comme types DB natifs (`CREATE TYPE`)
-- **SQLite** : Les enums deviennent des `TEXT` avec validation Prisma côté app
-
-**Type safety TypeScript conservé** dans les deux cas grâce au client Prisma généré.
+- Les enums sont stockés comme `TEXT` en base de données
+- Validation Prisma côté application garantit la cohérence
+- Type safety TypeScript complet via le client Prisma généré
 
 **Exemple :**
 ```typescript
-// Fonctionne identiquement avec PostgreSQL ou SQLite
+// Type safety complet avec SQLite
 await prisma.task.create({
   data: {
     status: TaskStatus.IN_PROGRESS, // ✅ Type safe
@@ -251,12 +225,24 @@ await prisma.task.create({
 })
 ```
 
-### Recommandation
+### Gestion des Arrays
 
-**Phase 1 (Développement)** : Utilisez PostgreSQL
-**Phase 2 (Distribution)** : Support SQLite sera ajouté pour faciliter le partage
+SQLite ne supporte pas nativement les arrays. Prisma les stocke comme JSON strings :
 
-Le code du MCP Server est architecturé pour supporter les deux sans modification.
+```typescript
+// Arrays gérés automatiquement
+await prisma.task.create({
+  data: {
+    areas: ["auth", "database"],          // Stocké comme JSON string
+    filesModified: ["src/auth.ts"],       // Stocké comme JSON string
+    achievements: ["JWT middleware OK"]   // Stocké comme JSON string
+  }
+})
+
+// Lecture transparente
+const task = await prisma.task.findUnique({ where: { id } })
+console.log(task.areas) // ["auth", "database"] - Array TypeScript normal
+```
 
 ---
 
@@ -552,33 +538,19 @@ const validated = snapshotDataSchema.parse(task.snapshotData)
 
 ### Initialisation
 
-**Avec PostgreSQL (recommandé) :**
 ```bash
 cd packages/shared
 
 # Créer le fichier .env
 cat > .env << EOF
-DATABASE_PROVIDER="postgresql"
-DATABASE_URL="postgresql://user:password@localhost:5432/mcp_tracker?schema=public"
-EOF
-
-# Lancer la migration
-npx prisma migrate dev --name init
-```
-
-**Avec SQLite (alternatif) :**
-```bash
-cd packages/shared
-
-# Créer le fichier .env
-cat > .env << EOF
-DATABASE_PROVIDER="sqlite"
 DATABASE_URL="file:./dev.db"
 EOF
 
 # Lancer la migration
 npx prisma migrate dev --name init
 ```
+
+**Note** : Le fichier `dev.db` sera créé automatiquement dans le dossier `packages/shared/`.
 
 ### Génération du Client Prisma
 

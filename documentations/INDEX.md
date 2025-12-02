@@ -47,7 +47,7 @@
 7. **[.claude/docs/database.md](../.claude/docs/database.md)** - SCHÉMA DB
    - Schéma Prisma complet avec enums
    - Explications de chaque modèle
-   - Support multi-DB (PostgreSQL/SQLite)
+   - Configuration SQLite (standalone, pas de serveur requis)
    - Exemples d'utilisation
 
 8. **[.claude/docs/standards.md](../.claude/docs/standards.md)** - CONVENTIONS
@@ -101,7 +101,7 @@
 | **Conventions de code** | `/.claude/docs/standards.md` | TypeScript + Validation |
 | **Structure des dossiers** | `/documentations/PROJECT-STRUCTURE.md` | Arborescence |
 | **Config Claude Code** | `/documentations/PROJECT-STRUCTURE.md` | Configuration Claude Code |
-| **Choix DB (PostgreSQL/SQLite)** | `/.claude/docs/database.md` | Support Multi-DB |
+| **Configuration SQLite** | `/.claude/docs/database.md` | Configuration SQLite |
 
 ---
 

@@ -1,15 +1,6 @@
 # Implementation Checklist - Phase 1 (MCP Server)
 
-## 🐳 Alternative Docker (Recommandé)
-
-**Pour un setup rapide avec Docker**, une documentation Docker complète sera disponible.
-Le Docker Compose inclura PostgreSQL + MCP Server pré-configurés.
-
-**Pour l'instant**, suivez le setup manuel ci-dessous pour Phase 1.
-
----
-
-## Setup Projet Manuel (30min)
+## Setup Projet (30min)
 
 ### 1. Initialiser le monorepo
 
@@ -82,39 +73,19 @@ mkdir -p prisma src
 **Copier le schema** :
 Extraire le schema Prisma de `/.claude/docs/database.md` → `packages/shared/prisma/schema.prisma`
 
-**Configurer la base de données** :
-
-Choisissez votre base de données (PostgreSQL recommandé pour Phase 1) :
-
-#### Option A : PostgreSQL (Recommandé)
+**Configurer la base de données SQLite** :
 
 ```bash
 # Créer .env dans packages/shared/
 cat > packages/shared/.env << EOF
-DATABASE_PROVIDER="postgresql"
-DATABASE_URL="postgresql://user:password@localhost:5432/mcp_tracker?schema=public"
-EOF
-```
-
-**Prérequis** : PostgreSQL doit être installé et lancé.
-
-**Installation rapide avec Docker** (si pas déjà installé) :
-```bash
-docker run --name mcp-postgres -e POSTGRES_PASSWORD=password -p 5432:5432 -d postgres:15
-docker exec -it mcp-postgres psql -U postgres -c "CREATE DATABASE mcp_tracker;"
-```
-
-#### Option B : SQLite (Alternatif - pour dev sans serveur DB)
-
-```bash
-# Créer .env dans packages/shared/
-cat > packages/shared/.env << EOF
-DATABASE_PROVIDER="sqlite"
 DATABASE_URL="file:./dev.db"
 EOF
 ```
 
-**Note** : SQLite fonctionne sans installation, mais a des limitations (voir `/.claude/docs/database.md`).
+**Avantages SQLite** :
+- ✅ Aucun serveur DB à installer
+- ✅ Fichier local portable (dev.db)
+- ✅ Idéal pour distribution standalone
 
 ---
 

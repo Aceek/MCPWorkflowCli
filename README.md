@@ -27,16 +27,7 @@ Toute la documentation technique se trouve dans `/documentations/` :
 
 ## 🚀 Quick Start
 
-### Setup recommandé (avec Docker)
-
-**Documentation Docker complète disponible prochainement** dans `documentations/DOCKER.md`.
-
-Le setup Docker inclura :
-- PostgreSQL containerisé (pré-configuré)
-- MCP Server prêt à l'emploi
-- Pas de configuration manuelle requise
-
-### Setup manuel
+### Setup
 
 ```bash
 # 1. Consulter la documentation
@@ -49,7 +40,7 @@ cat documentations/README.md
 cat documentations/IMPLEMENTATION-CHECKLIST.md
 ```
 
-**Note** : Le setup manuel supporte PostgreSQL ou SQLite (voir `DATABASE.md`).
+**Note** : Le projet utilise SQLite (base de données locale, aucun serveur externe requis).
 
 ## 🏗️ Architecture
 
@@ -67,11 +58,10 @@ mcp-workflow-tracker/
 ## 📊 Stack Technique
 
 - **MCP Server** : Node.js + TypeScript + @modelcontextprotocol/sdk
-- **Database** : PostgreSQL (recommandé) ou SQLite (distribution standalone)
-- **ORM** : Prisma (support multi-DB avec enums TypeScript)
+- **Database** : SQLite (base de données locale, aucun serveur requis)
+- **ORM** : Prisma (avec enums TypeScript type-safe)
 - **Web UI** : Next.js 14 + Socket.io (temps réel)
 - **Git Integration** : simple-git (snapshots/diffs robustes)
-- **Deployment** : Docker Compose (PostgreSQL + services containerisés)
 
 ## 🎯 Phase actuelle : Phase 1 (MCP Server Backend)
 
@@ -79,7 +69,7 @@ mcp-workflow-tracker/
 
 **Prochaines étapes** :
 1. Setup monorepo pnpm
-2. Configuration Prisma + PostgreSQL
+2. Configuration Prisma + SQLite
 3. Implémentation des 6 tools MCP
 4. Tests avec Claude Code
 

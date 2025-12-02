@@ -55,10 +55,9 @@ packages/
 ### Database
 
 - **OBLIGATOIRE** : Prisma ORM uniquement (pas de raw SQL)
-- **OBLIGATOIRE** : Support multi-DB via `DATABASE_PROVIDER` env var
-- **Phase 1** : PostgreSQL (développement local + Docker)
-- **Phase 2** : SQLite (distribution standalone npm)
+- **Provider** : SQLite (distribution standalone, pas de serveur requis)
 - **OBLIGATOIRE** : Migrations via Prisma (pas de sync())
+- **Note** : Les arrays sont stockés comme JSON strings, les enums comme TEXT
 
 ### Git
 
@@ -137,7 +136,7 @@ mcp-workflow-tracker/
 │   │   ├── prisma/
 │   │   │   ├── schema.prisma    # Avec enums type-safe
 │   │   │   └── migrations/
-│   │   └── .env                 # DATABASE_PROVIDER + DATABASE_URL
+│   │   └── .env                 # DATABASE_URL
 │   │
 │   ├── mcp-server/              # MCP Server (Phase 1)
 │   │   └── src/
@@ -165,7 +164,6 @@ mcp-workflow-tracker/
 ├── .claude/                     # Config Claude Code
 │   ├── CLAUDE.md               # Ce fichier
 │   └── docs/                   # Documentation technique
-├── docker-compose.yml          # Dev local (PostgreSQL)
 └── package.json                # Workspace root
 ```
 
@@ -280,19 +278,17 @@ MCP détecte : package.json modifié (zod ajouté)
 Résultat : Décision + preuve technique = audit complet
 ```
 
-### Multi-DB Support
+### Base de Données
 
-**PostgreSQL** (Phase 1) :
-- Développement local + Docker
-- Enums natifs DB
-- Performance optimale
-
-**SQLite** (Phase 2) :
-- Distribution standalone npm
-- Pas de serveur DB à installer
+**SQLite** :
+- Distribution standalone (aucun serveur externe requis)
+- Fichier local portable
 - Parfait pour package npm global
 
-**Code identique** : Prisma gère la conversion automatiquement.
+**Note technique** :
+- Enums Prisma stockés comme TEXT avec validation app-side
+- Arrays stockés comme JSON strings
+- Type safety TypeScript conservé via le client Prisma généré
 
 ---
 
