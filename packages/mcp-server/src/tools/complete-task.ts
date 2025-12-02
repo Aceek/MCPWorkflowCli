@@ -12,6 +12,11 @@ import {
   verifyScope,
   type GitSnapshotData,
 } from '../utils/git-snapshot.js'
+import {
+  toJsonArray,
+  fromJsonArray,
+  fromJsonObject,
+} from '../utils/json-fields.js'
 import { emitTaskUpdated, emitWorkflowUpdated } from '../websocket/index.js'
 import { NotFoundError, ValidationError } from '../utils/errors.js'
 import {
@@ -178,9 +183,7 @@ export async function handleCompleteTask(
 
   if (task.snapshotType === 'git' && task.snapshotData) {
     // SQLite: snapshotData is stored as JSON string
-    const snapshotData: GitSnapshotData | null = task.snapshotData
-      ? JSON.parse(task.snapshotData)
-      : null
+    const snapshotData = fromJsonObject<GitSnapshotData>(task.snapshotData)
     if (snapshotData?.gitHash) {
       const diff = await computeGitDiff(snapshotData.gitHash)
       filesAdded = diff.added
@@ -192,7 +195,7 @@ export async function handleCompleteTask(
   // Verify scope
   const allChangedFiles = [...filesAdded, ...filesModified, ...filesDeleted]
   // SQLite: areas is stored as JSON string
-  const taskAreas: string[] = task.areas ? JSON.parse(task.areas) : []
+  const taskAreas = fromJsonArray<string>(task.areas)
   const scopeVerification = verifyScope(allChangedFiles, taskAreas)
 
   // Map status to Prisma enum
@@ -215,23 +218,23 @@ export async function handleCompleteTask(
       completedAt,
       durationMs,
       summary: validated.outcome.summary,
-      achievements: JSON.stringify(validated.outcome.achievements ?? []),
-      limitations: JSON.stringify(validated.outcome.limitations ?? []),
+      achievements: toJsonArray(validated.outcome.achievements),
+      limitations: toJsonArray(validated.outcome.limitations),
       manualReviewNeeded: validated.outcome.manual_review_needed ?? false,
       manualReviewReason: validated.outcome.manual_review_reason,
-      nextSteps: JSON.stringify(validated.outcome.next_steps ?? []),
-      packagesAdded: JSON.stringify(validated.metadata?.packages_added ?? []),
-      packagesRemoved: JSON.stringify(validated.metadata?.packages_removed ?? []),
-      commandsExecuted: JSON.stringify(validated.metadata?.commands_executed ?? []),
+      nextSteps: toJsonArray(validated.outcome.next_steps),
+      packagesAdded: toJsonArray(validated.metadata?.packages_added),
+      packagesRemoved: toJsonArray(validated.metadata?.packages_removed),
+      commandsExecuted: toJsonArray(validated.metadata?.commands_executed),
       testsStatus,
       tokensInput: validated.metadata?.tokens_input,
       tokensOutput: validated.metadata?.tokens_output,
-      filesAdded: JSON.stringify(filesAdded),
-      filesModified: JSON.stringify(filesModified),
-      filesDeleted: JSON.stringify(filesDeleted),
+      filesAdded: toJsonArray(filesAdded),
+      filesModified: toJsonArray(filesModified),
+      filesDeleted: toJsonArray(filesDeleted),
       scopeMatch: scopeVerification.scopeMatch,
-      unexpectedFiles: JSON.stringify(scopeVerification.unexpectedFiles),
-      warnings: JSON.stringify(scopeVerification.warnings),
+      unexpectedFiles: toJsonArray(scopeVerification.unexpectedFiles),
+      warnings: toJsonArray(scopeVerification.warnings),
     },
   })
 
