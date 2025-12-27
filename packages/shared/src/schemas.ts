@@ -9,9 +9,18 @@
  */
 
 import { z } from 'zod'
+import {
+  WorkflowStatus,
+  WorkflowProfile,
+  TaskStatus,
+  PhaseStatus,
+  DecisionCategory,
+  IssueType,
+  TestsStatus,
+} from './index.js'
 
 // ============================================
-// ENUM SCHEMAS
+// ENUM SCHEMAS (derived from enum objects using z.nativeEnum)
 // ============================================
 
 /**
@@ -22,13 +31,7 @@ import { z } from 'zod'
  * - FAILED: Workflow failed
  * - BLOCKED: Workflow is waiting for human intervention
  */
-export const WorkflowStatusSchema = z.enum([
-  'PENDING',
-  'IN_PROGRESS',
-  'COMPLETED',
-  'FAILED',
-  'BLOCKED',
-])
+export const WorkflowStatusSchema = z.nativeEnum(WorkflowStatus)
 export type WorkflowStatusEnum = z.infer<typeof WorkflowStatusSchema>
 
 /**
@@ -37,7 +40,7 @@ export type WorkflowStatusEnum = z.infer<typeof WorkflowStatusSchema>
  * - STANDARD: 3 phases
  * - COMPLEX: 4+ phases, parallel execution possible
  */
-export const WorkflowProfileSchema = z.enum(['SIMPLE', 'STANDARD', 'COMPLEX'])
+export const WorkflowProfileSchema = z.nativeEnum(WorkflowProfile)
 export type WorkflowProfileEnum = z.infer<typeof WorkflowProfileSchema>
 
 /**
@@ -47,12 +50,7 @@ export type WorkflowProfileEnum = z.infer<typeof WorkflowProfileSchema>
  * - PARTIAL_SUCCESS: Task completed with compromises
  * - FAILED: Task failed
  */
-export const TaskStatusSchema = z.enum([
-  'IN_PROGRESS',
-  'SUCCESS',
-  'PARTIAL_SUCCESS',
-  'FAILED',
-])
+export const TaskStatusSchema = z.nativeEnum(TaskStatus)
 export type TaskStatusEnum = z.infer<typeof TaskStatusSchema>
 
 /**
@@ -62,12 +60,7 @@ export type TaskStatusEnum = z.infer<typeof TaskStatusSchema>
  * - COMPLETED: Phase finished successfully
  * - FAILED: Phase failed
  */
-export const PhaseStatusSchema = z.enum([
-  'PENDING',
-  'IN_PROGRESS',
-  'COMPLETED',
-  'FAILED',
-])
+export const PhaseStatusSchema = z.nativeEnum(PhaseStatus)
 export type PhaseStatusEnum = z.infer<typeof PhaseStatusSchema>
 
 /**
@@ -78,13 +71,7 @@ export type PhaseStatusEnum = z.infer<typeof PhaseStatusSchema>
  * - WORKAROUND: Temporary fix or workaround
  * - OTHER: Other types of decisions
  */
-export const DecisionCategorySchema = z.enum([
-  'ARCHITECTURE',
-  'LIBRARY_CHOICE',
-  'TRADE_OFF',
-  'WORKAROUND',
-  'OTHER',
-])
+export const DecisionCategorySchema = z.nativeEnum(DecisionCategory)
 export type DecisionCategoryEnum = z.infer<typeof DecisionCategorySchema>
 
 /**
@@ -95,13 +82,7 @@ export type DecisionCategoryEnum = z.infer<typeof DecisionCategorySchema>
  * - UNCLEAR_REQUIREMENT: Ambiguous requirements
  * - OTHER: Other types of issues
  */
-export const IssueTypeSchema = z.enum([
-  'DOC_GAP',
-  'BUG',
-  'DEPENDENCY_CONFLICT',
-  'UNCLEAR_REQUIREMENT',
-  'OTHER',
-])
+export const IssueTypeSchema = z.nativeEnum(IssueType)
 export type IssueTypeEnum = z.infer<typeof IssueTypeSchema>
 
 /**
@@ -110,7 +91,7 @@ export type IssueTypeEnum = z.infer<typeof IssueTypeSchema>
  * - FAILED: Some tests failed
  * - NOT_RUN: Tests were not executed
  */
-export const TestsStatusSchema = z.enum(['PASSED', 'FAILED', 'NOT_RUN'])
+export const TestsStatusSchema = z.nativeEnum(TestsStatus)
 export type TestsStatusEnum = z.infer<typeof TestsStatusSchema>
 
 // ============================================
