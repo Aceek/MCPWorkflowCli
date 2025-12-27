@@ -17,6 +17,7 @@ import {
   fromJsonArray,
   fromJsonObject,
 } from '../utils/json-fields.js'
+import { checkAndUpdateWorkflowStatus } from '../utils/workflow-metrics.js'
 import {
   emitTaskUpdated,
   emitWorkflowUpdated,
@@ -26,7 +27,6 @@ import {
   taskStatusMap,
   testsStatusMap,
   TaskStatus,
-  WorkflowStatus,
 } from '../types/enums.js'
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 
@@ -276,101 +276,4 @@ export async function handleCompleteTask(
       },
     ],
   }
-}
-
-/**
- * Check if all tasks in a workflow are complete and update workflow status.
- * Also computes aggregated metrics (totalDurationMs, totalTokens).
- *
- * Status logic:
- * - If ANY task is IN_PROGRESS -> workflow stays IN_PROGRESS
- * - If ANY task is FAILED -> workflow is FAILED
- * - If ANY task is PARTIAL_SUCCESS (and none FAILED) -> workflow is FAILED
- * - If ALL tasks are SUCCESS -> workflow is COMPLETED
- *
- * Returns the updated workflow if status changed, null otherwise.
- */
-async function checkAndUpdateWorkflowStatus(
-  workflowId: string
-): Promise<Awaited<ReturnType<typeof prisma.workflow.update>> | null> {
-  const tasks = await prisma.task.findMany({
-    where: { workflowId },
-    select: {
-      status: true,
-      durationMs: true,
-      tokensInput: true,
-      tokensOutput: true,
-    },
-  })
-
-  if (tasks.length === 0) {
-    return null
-  }
-
-  // Check if any task is still in progress
-  const anyInProgress = tasks.some(
-    (task) => task.status === TaskStatus.IN_PROGRESS
-  )
-
-  if (anyInProgress) {
-    // Workflow stays IN_PROGRESS, but still update metrics
-    const metrics = computeWorkflowMetrics(tasks)
-    await prisma.workflow.update({
-      where: { id: workflowId },
-      data: metrics,
-    })
-    return null
-  }
-
-  // All tasks are complete, determine final workflow status
-  const anyFailed = tasks.some((task) => task.status === TaskStatus.FAILED)
-  const anyPartialSuccess = tasks.some(
-    (task) => task.status === TaskStatus.PARTIAL_SUCCESS
-  )
-
-  let newStatus: WorkflowStatus
-  if (anyFailed || anyPartialSuccess) {
-    // If any task failed or had partial success, mark workflow as FAILED
-    newStatus = WorkflowStatus.FAILED
-  } else {
-    // All tasks succeeded
-    newStatus = WorkflowStatus.COMPLETED
-  }
-
-  // Compute aggregated metrics
-  const metrics = computeWorkflowMetrics(tasks)
-
-  const updatedWorkflow = await prisma.workflow.update({
-    where: { id: workflowId },
-    data: {
-      status: newStatus,
-      ...metrics,
-    },
-  })
-
-  return updatedWorkflow
-}
-
-/**
- * Compute aggregated metrics from tasks.
- */
-function computeWorkflowMetrics(
-  tasks: { durationMs: number | null; tokensInput: number | null; tokensOutput: number | null }[]
-): { totalDurationMs: number; totalTokens: number } {
-  let totalDurationMs = 0
-  let totalTokens = 0
-
-  for (const task of tasks) {
-    if (task.durationMs) {
-      totalDurationMs += task.durationMs
-    }
-    if (task.tokensInput) {
-      totalTokens += task.tokensInput
-    }
-    if (task.tokensOutput) {
-      totalTokens += task.tokensOutput
-    }
-  }
-
-  return { totalDurationMs, totalTokens }
 }
