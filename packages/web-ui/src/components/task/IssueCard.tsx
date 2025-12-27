@@ -18,10 +18,15 @@ interface IssueCardProps {
   issue: Issue
 }
 
-const typeConfig: Record<
-  string,
-  { label: string; icon: React.ReactNode; color: string }
-> = {
+type TypeConfigItem = { label: string; icon: React.ReactNode; color: string }
+
+const defaultIssueType: TypeConfigItem = {
+  label: 'Other',
+  icon: <AlertCircle className="h-3.5 w-3.5" />,
+  color: 'text-[hsl(var(--muted-foreground))]',
+}
+
+const typeConfig: Record<string, TypeConfigItem> = {
   DOC_GAP: {
     label: 'Documentation Gap',
     icon: <FileQuestion className="h-3.5 w-3.5" />,
@@ -42,15 +47,11 @@ const typeConfig: Record<
     icon: <HelpCircle className="h-3.5 w-3.5" />,
     color: 'text-[hsl(var(--muted-foreground))]',
   },
-  OTHER: {
-    label: 'Other',
-    icon: <AlertCircle className="h-3.5 w-3.5" />,
-    color: 'text-[hsl(var(--muted-foreground))]',
-  },
+  OTHER: defaultIssueType,
 }
 
 export function IssueCard({ issue }: IssueCardProps) {
-  const issueType = typeConfig[issue.type] ?? typeConfig.OTHER!
+  const issueType = typeConfig[issue.type] ?? defaultIssueType
 
   return (
     <motion.div
@@ -61,9 +62,9 @@ export function IssueCard({ issue }: IssueCardProps) {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className={issueType!.color}>{issueType!.icon}</span>
-          <span className={cn('text-xs font-medium', issueType!.color)}>
-            {issueType!.label}
+          <span className={issueType.color}>{issueType.icon}</span>
+          <span className={cn('text-xs font-medium', issueType.color)}>
+            {issueType.label}
           </span>
         </div>
         {issue.requiresHumanReview && (

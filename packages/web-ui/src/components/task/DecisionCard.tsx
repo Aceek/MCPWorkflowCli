@@ -19,10 +19,15 @@ interface DecisionCardProps {
   decision: Decision
 }
 
-const categoryConfig: Record<
-  string,
-  { label: string; icon: React.ReactNode; color: string }
-> = {
+type CategoryConfigItem = { label: string; icon: React.ReactNode; color: string }
+
+const defaultCategory: CategoryConfigItem = {
+  label: 'Other',
+  icon: <Lightbulb className="h-3.5 w-3.5" />,
+  color: 'text-[hsl(var(--muted-foreground))]',
+}
+
+const categoryConfig: Record<string, CategoryConfigItem> = {
   ARCHITECTURE: {
     label: 'Architecture',
     icon: <Building2 className="h-3.5 w-3.5" />,
@@ -43,15 +48,11 @@ const categoryConfig: Record<
     icon: <Wrench className="h-3.5 w-3.5" />,
     color: 'text-[hsl(var(--muted-foreground))]',
   },
-  OTHER: {
-    label: 'Other',
-    icon: <Lightbulb className="h-3.5 w-3.5" />,
-    color: 'text-[hsl(var(--muted-foreground))]',
-  },
+  OTHER: defaultCategory,
 }
 
 export function DecisionCard({ decision }: DecisionCardProps) {
-  const category = categoryConfig[decision.category] ?? categoryConfig.OTHER!
+  const category = categoryConfig[decision.category] ?? defaultCategory
   const optionsConsidered = parseJsonArraySafe(decision.optionsConsidered, StringArraySchema)
 
   return (
@@ -62,9 +63,9 @@ export function DecisionCard({ decision }: DecisionCardProps) {
     >
       {/* Header */}
       <div className="flex items-center gap-2">
-        <span className={category!.color}>{category!.icon}</span>
-        <span className={cn('text-xs font-medium', category!.color)}>
-          {category!.label}
+        <span className={category.color}>{category.icon}</span>
+        <span className={cn('text-xs font-medium', category.color)}>
+          {category.label}
         </span>
       </div>
 

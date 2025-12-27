@@ -51,7 +51,7 @@ export function TaskTree({
       {/* Render subtasks recursively */}
       {subtasks.length > 0 && (
         <div className="mt-3 space-y-3 relative">
-          {subtasks.map((subtask, index) => (
+          {subtasks.map((subtask) => (
             <TaskTree
               key={subtask.id}
               task={subtask}
