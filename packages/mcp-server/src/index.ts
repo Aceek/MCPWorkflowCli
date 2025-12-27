@@ -32,15 +32,15 @@ import {
   completeTaskTool,
   handleCompleteTask,
 } from './tools/complete-task.js'
-// Mission system tools
+// Workflow tools
 import {
-  startMissionTool,
-  handleStartMission,
-} from './tools/start-mission.js'
+  startWorkflowTool,
+  handleStartWorkflow,
+} from './tools/start-workflow.js'
 import {
-  completeMissionTool,
-  handleCompleteMission,
-} from './tools/complete-mission.js'
+  completeWorkflowTool,
+  handleCompleteWorkflow,
+} from './tools/complete-workflow.js'
 import { getContextTool, handleGetContext } from './tools/get-context.js'
 
 // Import error types
@@ -83,11 +83,11 @@ function createServer(): Server {
   // Register tool list handler
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: [
-      // Mission system tools
-      startMissionTool,
-      completeMissionTool,
+      // Workflow tools
+      startWorkflowTool,
+      completeWorkflowTool,
       getContextTool,
-      // Task tools (extended for mission support)
+      // Task tools
       startTaskTool,
       completeTaskTool,
       // Logging tools
@@ -119,12 +119,12 @@ async function handleToolCall(
   args: unknown
 ): Promise<CallToolResult> {
   switch (name) {
-    // Mission system
-    case 'start_mission':
-      return handleStartMission(args)
+    // Workflow tools
+    case 'start_workflow':
+      return handleStartWorkflow(args)
 
-    case 'complete_mission':
-      return handleCompleteMission(args)
+    case 'complete_workflow':
+      return handleCompleteWorkflow(args)
 
     case 'get_context':
       return handleGetContext(args)

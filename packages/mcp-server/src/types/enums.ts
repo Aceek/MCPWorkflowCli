@@ -13,15 +13,48 @@ import {
   DecisionCategory,
   IssueType,
   TestsStatus,
-  MissionProfile,
-  MissionStatus,
-  PhaseStatus,
   CallerType,
 } from '@mission-control/shared'
 
 // ============================================
+// WORKFLOW PROFILE (for mission-style workflows)
+// ============================================
+
+/**
+ * Workflow profile enum
+ * Defines complexity profiles for workflows
+ */
+export const WorkflowProfile = {
+  SIMPLE: 'SIMPLE',     // 2 phases
+  STANDARD: 'STANDARD', // 3 phases
+  COMPLEX: 'COMPLEX',   // 4+ phases, parallel
+} as const
+export type WorkflowProfile = (typeof WorkflowProfile)[keyof typeof WorkflowProfile]
+
+// ============================================
 // CONVERSION MAPS (MCP Input -> Prisma Enum)
 // ============================================
+
+/**
+ * Workflow profile conversion map
+ * MCP input: 'simple' | 'standard' | 'complex'
+ */
+export const workflowProfileMap: Record<string, WorkflowProfile> = {
+  simple: WorkflowProfile.SIMPLE,
+  standard: WorkflowProfile.STANDARD,
+  complex: WorkflowProfile.COMPLEX,
+}
+
+/**
+ * Workflow status conversion map
+ * MCP input: 'completed' | 'failed' | 'partial'
+ * Prisma enum: WorkflowStatus
+ */
+export const workflowStatusMap: Record<string, WorkflowStatus> = {
+  completed: WorkflowStatus.COMPLETED,
+  failed: WorkflowStatus.FAILED,
+  partial: WorkflowStatus.FAILED, // Partial success is treated as failed for workflow
+}
 
 /**
  * Task status conversion map
@@ -71,46 +104,6 @@ export const testsStatusMap: Record<string, TestsStatus> = {
   not_run: TestsStatus.NOT_RUN,
 }
 
-// ============================================
-// MISSION SYSTEM CONVERSION MAPS
-// ============================================
-
-/**
- * Mission profile conversion map
- * MCP input: 'simple' | 'standard' | 'complex'
- * Prisma enum: MissionProfile
- */
-export const missionProfileMap: Record<string, MissionProfile> = {
-  simple: MissionProfile.SIMPLE,
-  standard: MissionProfile.STANDARD,
-  complex: MissionProfile.COMPLEX,
-}
-
-/**
- * Mission status conversion map
- * MCP input: 'pending' | 'in_progress' | 'completed' | 'failed' | 'blocked'
- * Prisma enum: MissionStatus
- */
-export const missionStatusMap: Record<string, MissionStatus> = {
-  pending: MissionStatus.PENDING,
-  in_progress: MissionStatus.IN_PROGRESS,
-  completed: MissionStatus.COMPLETED,
-  failed: MissionStatus.FAILED,
-  blocked: MissionStatus.BLOCKED,
-}
-
-/**
- * Phase status conversion map
- * MCP input: 'pending' | 'in_progress' | 'completed' | 'failed'
- * Prisma enum: PhaseStatus
- */
-export const phaseStatusMap: Record<string, PhaseStatus> = {
-  pending: PhaseStatus.PENDING,
-  in_progress: PhaseStatus.IN_PROGRESS,
-  completed: PhaseStatus.COMPLETED,
-  failed: PhaseStatus.FAILED,
-}
-
 /**
  * Caller type conversion map
  * MCP input: 'orchestrator' | 'subagent'
@@ -131,8 +124,5 @@ export {
   DecisionCategory,
   IssueType,
   TestsStatus,
-  MissionProfile,
-  MissionStatus,
-  PhaseStatus,
   CallerType,
 }

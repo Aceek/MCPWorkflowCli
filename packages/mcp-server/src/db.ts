@@ -38,7 +38,6 @@ export async function checkDatabaseHealth(): Promise<HealthCheckResult> {
     result.database = true
 
     // Test 2: Do required tables exist?
-    await prisma.mission.count()
     await prisma.workflow.count()
     await prisma.task.count()
     result.tables = true

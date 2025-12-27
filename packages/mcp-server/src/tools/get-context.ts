@@ -1,7 +1,7 @@
 /**
  * get_context MCP Tool
  *
- * Unified query tool to retrieve mission context for sub-agents.
+ * Unified query tool to retrieve workflow context for sub-agents.
  * Returns decisions, milestones, blockers, phase summary, and tasks.
  */
 
@@ -12,13 +12,12 @@ import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js'
 
 // Zod schema for validation
 const getContextSchema = z.object({
-  mission_id: z.string().min(1),
+  workflow_id: z.string().min(1),
   include: z.array(
-    z.enum(['decisions', 'milestones', 'blockers', 'phase_summary', 'tasks'])
+    z.enum(['decisions', 'milestones', 'blockers', 'tasks'])
   ),
   filter: z
     .object({
-      phase: z.number().int().optional(),
       agent: z.string().optional(),
       since: z.string().optional(), // ISO timestamp
     })
@@ -28,29 +27,25 @@ const getContextSchema = z.object({
 // MCP Tool definition
 export const getContextTool = {
   name: 'get_context',
-  description: 'Retrieve mission context (decisions, milestones, blockers, phases, tasks)',
+  description: 'Retrieve workflow context (decisions, milestones, blockers, tasks)',
   inputSchema: {
     type: 'object' as const,
     properties: {
-      mission_id: {
+      workflow_id: {
         type: 'string',
-        description: 'The mission ID to query',
+        description: 'The workflow ID to query',
       },
       include: {
         type: 'array',
         items: {
           type: 'string',
-          enum: ['decisions', 'milestones', 'blockers', 'phase_summary', 'tasks'],
+          enum: ['decisions', 'milestones', 'blockers', 'tasks'],
         },
         description: 'What context to include in the response',
       },
       filter: {
         type: 'object',
         properties: {
-          phase: {
-            type: 'number',
-            description: 'Filter by phase number',
-          },
           agent: {
             type: 'string',
             description: 'Filter by agent name',
@@ -63,7 +58,7 @@ export const getContextTool = {
         description: 'Optional filters for the query',
       },
     },
-    required: ['mission_id', 'include'],
+    required: ['workflow_id', 'include'],
   },
 }
 
@@ -73,44 +68,30 @@ export async function handleGetContext(
 ): Promise<CallToolResult> {
   // Validate input
   const validated = getContextSchema.parse(args)
-  const { mission_id, include, filter } = validated
+  const { workflow_id, include, filter } = validated
 
-  // Verify mission exists and get phases
-  const mission = await prisma.mission.findUnique({
-    where: { id: mission_id },
+  // Verify workflow exists and get tasks
+  const workflow = await prisma.workflow.findUnique({
+    where: { id: workflow_id },
     include: {
-      phases: {
-        include: {
-          tasks: true,
-        },
-        orderBy: { number: 'asc' },
-      },
+      tasks: true,
     },
   })
 
-  if (!mission) {
-    throw new NotFoundError(`Mission not found: ${mission_id}`)
+  if (!workflow) {
+    throw new NotFoundError(`Workflow not found: ${workflow_id}`)
   }
 
   // Build response object
   const response: Record<string, unknown> = {
-    mission_id: mission.id,
-    mission_name: mission.name,
-    mission_status: mission.status,
-    current_phase: mission.currentPhase,
-    total_phases: mission.totalPhases,
+    workflow_id: workflow.id,
+    workflow_name: workflow.name,
+    workflow_status: workflow.status,
   }
 
-  // Get task IDs for the mission, optionally filtered by phase
-  const getTaskIds = async (): Promise<string[]> => {
-    let phases = mission.phases
-
-    // Filter by phase number if specified
-    if (filter?.phase !== undefined) {
-      phases = phases.filter((p) => p.number === filter.phase)
-    }
-
-    let tasks = phases.flatMap((p) => p.tasks)
+  // Get task IDs for the workflow
+  const getTaskIds = (): string[] => {
+    let tasks = workflow.tasks
 
     // Filter by agent if specified
     if (filter?.agent) {
@@ -120,7 +101,7 @@ export async function handleGetContext(
     return tasks.map((t) => t.id)
   }
 
-  const taskIds = await getTaskIds()
+  const taskIds = getTaskIds()
 
   // Parse since filter
   const sinceDate = filter?.since ? new Date(filter.since) : undefined
@@ -183,47 +164,9 @@ export async function handleGetContext(
     }))
   }
 
-  // Include phase summary
-  if (include.includes('phase_summary')) {
-    let phases = mission.phases
-
-    // Filter by phase number if specified
-    if (filter?.phase !== undefined) {
-      phases = phases.filter((p) => p.number === filter.phase)
-    }
-
-    response.phase_summary = phases.map((phase) => {
-      const phaseTasks = phase.tasks
-      const totalDurationMs = phaseTasks.reduce(
-        (sum, t) => sum + (t.durationMs || 0),
-        0
-      )
-
-      return {
-        phase_number: phase.number,
-        name: phase.name,
-        status: phase.status,
-        is_parallel: phase.isParallel,
-        tasks_count: phaseTasks.length,
-        duration_seconds: Math.round(totalDurationMs / 1000),
-        started_at: phase.startedAt?.toISOString(),
-        completed_at: phase.completedAt?.toISOString(),
-      }
-    })
-  }
-
   // Include tasks
   if (include.includes('tasks')) {
-    let phases = mission.phases
-
-    // Filter by phase number if specified
-    if (filter?.phase !== undefined) {
-      phases = phases.filter((p) => p.number === filter.phase)
-    }
-
-    let tasks = phases.flatMap((p) =>
-      p.tasks.map((t) => ({ ...t, phaseNumber: p.number }))
-    )
+    let tasks = workflow.tasks
 
     // Filter by agent if specified
     if (filter?.agent) {
@@ -237,7 +180,6 @@ export async function handleGetContext(
 
     response.tasks = tasks.map((t) => ({
       id: t.id,
-      phase: t.phaseNumber,
       name: t.name,
       goal: t.goal,
       status: t.status,
