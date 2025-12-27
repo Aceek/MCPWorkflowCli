@@ -195,46 +195,53 @@
 
 ---
 
-## Phase 4: Agent Adaptation
+## Phase 4: Agent Adaptation ✅
 
 **Goal**: mission-architect uses MCP tools; document integration for external agents
 
 ### 4.1 mission-architect Agent (Bundled)
-- [ ] Update to call `start_mission` when creating mission
-- [ ] Store mission_id in generated mission.md
-- [ ] Update generated workflow.md with phase_ids
-- [ ] Update generated start.md with MCP instructions
-- [ ] Remove any memory.md references
+- [x] Update to call `start_mission` when creating mission
+- [x] Store mission_id in generated mission.md
+- [x] Update generated workflow.md with phase numbers
+- [x] Update generated start.md with MCP orchestrator instructions
+- [x] Remove any memory.md references
 
 ### 4.2 Orchestrator Instructions
-- [ ] Write orchestrator pattern doc
-- [ ] Define MCP call sequence:
-  1. `start_mission`
-  2. Loop: `start_phase` → launch sub-agents → `complete_phase`
+- [x] Write orchestrator pattern doc (`orchestrator-guide.md`)
+- [x] Define MCP call sequence:
+  1. `start_task` (orchestrator)
+  2. Loop: launch sub-agent → `complete_task` with phase_complete
   3. `complete_mission`
-- [ ] Handle blocker escalation (stop + report)
+- [x] Handle blocker escalation (get_context + stop + report)
 
 ### 4.3 External Agent Integration Guide
 > Note: Agents like feature-planner, feature-implementer, senior-reviewer are EXTERNAL to this project.
 > We only document how they CAN use MCP tools if desired.
 
-- [ ] Write integration guide for external agents
-- [ ] Document MCP tool usage patterns:
-  - [ ] `start_task` with caller_type="subagent"
-  - [ ] `log_decision`, `log_milestone`, `log_issue` usage
-  - [ ] `get_mission_context` for reading shared state
-  - [ ] `complete_task` for finalizing work
-- [ ] Provide example agent prompt snippet
+- [x] Write integration guide for external agents (`agent-integration.md`)
+- [x] Document MCP tool usage patterns:
+  - [x] `start_task` with caller_type="subagent"
+  - [x] `log_decision`, `log_milestone`, `log_issue` usage
+  - [x] `get_context` for reading shared state
+  - [x] `complete_task` for finalizing work
+- [x] Provide example agent prompt snippets
 
 ### 4.4 Prompt Templates
-- [ ] Create reusable MCP instruction block (for any agent to copy)
-- [ ] Document caller_type conventions
-- [ ] Document required vs optional tools per agent type
+- [x] Create reusable MCP instruction block (`mcp-instructions.md`)
+- [x] Document caller_type conventions
+- [x] Document required vs optional tools per agent type
+
+### 4.5 Template Updates
+- [x] Update `mission.md` template with mission_id field
+- [x] Update `workflow.md` template with phase numbers
+- [x] Update `agent.md` template with MCP protocol
+- [x] Update all profile docs (simple, standard, complex) for MCP
+- [x] Update `architecture.md` for MCP-based state tracking
 
 **Completion Criteria**:
-- mission-architect fully updated for MCP
-- Integration guide for external agents complete
-- Test run on sample mission with mission-architect
+- [x] mission-architect fully updated for MCP
+- [x] Integration guide for external agents complete
+- [ ] Test run on sample mission with mission-architect
 
 ---
 
@@ -399,7 +406,7 @@
 Phase 1: Merge & Reorganize    [■■■■■■■■■■] 100%
 Phase 2: Schema Extension      [■■■■■■■■■■] 100%
 Phase 3: MCP Tools Extension   [■■■■■■■■■■] 100%
-Phase 4: Agent Adaptation      [          ] 0%
+Phase 4: Agent Adaptation      [■■■■■■■■■■] 100%
 Phase 5: WebUI Adaptation      [          ] 0%
 Phase 6: Setup Script          [          ] 0%
 Phase 7: Documentation         [          ] 0%
@@ -413,6 +420,7 @@ Phase 7: Documentation         [          ] 0%
 | 2024-12-27 | 1 | Renamed to mission-control, imported mission-system, created scripts/ | documentations/ cleanup deferred to Phase 7 |
 | 2024-12-27 | 2 | Added Mission, Phase models + CallerType context to Task | SQLite compatible (enums as TEXT) |
 | 2024-12-27 | 3 | Implemented 9 MCP tools with mission/phase support | start_mission, complete_mission, get_context + extended start/complete_task |
+| 2024-12-27 | 4 | Updated mission-architect + created 3 new guides | orchestrator-guide.md, agent-integration.md, mcp-instructions.md + updated all templates |
 
 ---
 

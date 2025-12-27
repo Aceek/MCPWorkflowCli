@@ -20,7 +20,8 @@ model: sonnet  # sonnet|opus|haiku
 
 # Mission Context
 Read: `.claude/missions/<name>/mission.md`
-Memory: `.claude/missions/<name>/memory.md`
+Mission ID: `<mission_id>`
+Phase: <phase_number>
 
 # Your Task
 <Specific task for this agent within the mission>
@@ -35,15 +36,58 @@ Memory: `.claude/missions/<name>/memory.md`
 - <Scope limits>
 - <Quality requirements>
 
+# MCP Protocol
+
+## At Start
+```
+start_task({
+  mission_id: "<mission_id>",
+  phase: <phase_number>,
+  caller_type: "subagent",
+  agent_name: "<agent-name>",
+  name: "<task_name>",
+  goal: "<task_goal>",
+  areas: ["<affected_paths>"]
+})
+```
+Store the returned `task_id`.
+
+## During Execution
+- `log_decision`: For architectural choices
+- `log_milestone`: For progress updates (include % if known)
+- `log_issue`: For blockers (set requiresHumanReview: true if blocked)
+
+## Read Previous Context (if needed)
+```
+get_context({
+  mission_id: "<mission_id>",
+  include: ["decisions"],
+  filter: { phase: <previous_phase> }
+})
+```
+
+## At End
+```
+complete_task({
+  task_id: "<task_id>",
+  status: "success" | "partial_success" | "failed",
+  outcome: {
+    summary: "<what_was_accomplished>",
+    achievements: ["<achievement_1>"],
+    limitations: ["<limitation_1>"]
+  },
+  phase_complete: true  // Set true only if last task of phase
+})
+```
+
 # Execution Steps
-1. Read memory.md → understand current state
-2. <Step 2>
+1. Call start_task → get task_id
+2. [Optional] Query previous phase context via get_context
 3. <Step 3>
-4. Update memory.md with:
-   - Decisions made
-   - Progress on your scope
-   - Any blockers encountered
-5. Return summary to orchestrator
+4. <Step 4>
+5. Log decisions and progress as appropriate
+6. Call complete_task with outcome summary
+7. Return summary to orchestrator
 
 # Output Format
 <Specify exact format for return summary>
@@ -55,16 +99,16 @@ Memory: `.claude/missions/<name>/memory.md`
 |-----------|----------------|
 | Single responsibility | One clear task per agent |
 | Minimal tools | Only tools needed for task |
-| Memory-aware | Always read/write memory.md |
+| MCP-aware | Use MCP tools for state tracking |
 | Scope-bound | Never exceed defined scope |
-| Failure-explicit | Report blockers, don't hide |
+| Failure-explicit | Use log_issue for blockers |
 
 ## Common Agent Types
 
-| Type | Purpose | Typical Tools |
-|------|---------|---------------|
-| Analyzer | Understand code/docs | Read, Grep, Glob |
-| Implementer | Write/modify code | Read, Write, Edit, Bash |
-| Reviewer | Validate quality | Read, Grep, Bash (tests) |
-| Documenter | Update docs | Read, Write |
-| Tester | Run/write tests | Read, Write, Bash |
+| Type | Purpose | Typical Tools | MCP Focus |
+|------|---------|---------------|-----------|
+| Analyzer | Understand code/docs | Read, Grep, Glob | log_decision |
+| Implementer | Write/modify code | Read, Write, Edit, Bash | log_milestone |
+| Reviewer | Validate quality | Read, Grep, Bash (tests) | log_issue |
+| Documenter | Update docs | Read, Write | log_milestone |
+| Tester | Run/write tests | Read, Write, Bash | log_issue |

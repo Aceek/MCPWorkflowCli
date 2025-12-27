@@ -9,17 +9,17 @@
 ## Schema
 ```
 ┌─────────────┐
-│  Analyzer   │
+│  Analyzer   │  Phase 1
 └──────┬──────┘
        │
        ▼
 ┌─────────────┐
-│ Implementer │
+│ Implementer │  Phase 2
 └──────┬──────┘
        │
        ▼
 ┌─────────────┐
-│  Reviewer   │
+│  Reviewer   │  Phase 3
 └─────────────┘
 ```
 
@@ -28,69 +28,86 @@
 ```yaml
 phases:
   - id: analyze
+    number: 1
     name: Analyze Codebase
     agents:
       - type: analyzer
+        subagent_type: "general-purpose"
         scope: understand current state, identify changes needed
     parallel: false
     outputs:
-      - memory.md#Decisions
-      - memory.md#Progress (planned changes)
-    completion: analysis report complete
+      - log_decision: analysis findings and recommendations
+      - log_milestone: analysis progress
+    completion: analysis complete
 
   - id: implement
+    number: 2
     name: Implement Changes
-    requires: analyze
+    requires: 1
     agents:
       - type: implementer
+        subagent_type: "general-purpose"
         scope: execute planned changes from analysis
     parallel: false
     outputs:
-      - memory.md#Progress
-      - memory.md#Decisions (implementation choices)
+      - log_decision: implementation choices
+      - log_milestone: implementation progress
     completion: all planned changes done
 
   - id: review
+    number: 3
     name: Review & Validate
-    requires: implement
+    requires: 2
     agents:
       - type: reviewer
+        subagent_type: "general-purpose"
         scope: validate against mission + analysis
     parallel: false
     outputs:
-      - memory.md#Progress
+      - log_decision: review findings
       - final-report.md
     completion: all criteria met OR blockers documented
 ```
 
-## Memory Structure
-```markdown
-# Memory: <mission>
-Updated: <ts>
-Phase: 1/3
+## MCP Integration
 
-## Analysis Summary
-<Compact findings from analyzer>
+### Orchestrator Flow
+```
+1. start_task({mission_id, phase: 1, caller_type: "orchestrator"})
+2. Launch analyzer sub-agent
+3. complete_task({task_id, phase_complete: true})
+4. get_context({mission_id, include: ["blockers"]}) → check for blockers
+5. start_task({mission_id, phase: 2, caller_type: "orchestrator"})
+6. Launch implementer sub-agent
+7. complete_task({task_id, phase_complete: true})
+8. get_context({mission_id, include: ["blockers"]}) → check for blockers
+9. start_task({mission_id, phase: 3, caller_type: "orchestrator"})
+10. Launch reviewer sub-agent
+11. complete_task({task_id, phase_complete: true})
+12. complete_mission({mission_id, status: "completed"})
+```
 
-## Planned Changes
-| Component | Change Type | Priority |
-|-----------|-------------|----------|
+### Sub-Agent: Implementer
+Reads analysis decisions before implementing:
+```
+get_context({
+  mission_id: "...",
+  include: ["decisions"],
+  filter: { phase: 1 }
+})
+```
 
-## Decisions
-- [ts] <decision> (rationale)
-
-## Progress
-| Planned | Status | Actual Files |
-|---------|--------|--------------|
-
-## Blockers
-- [ ] <blocker> → <impact>
-
-## Review Results
-| Criterion | Pass | Notes |
-|-----------|------|-------|
+### Sub-Agent: Reviewer
+Reads all previous decisions:
+```
+get_context({
+  mission_id: "...",
+  include: ["decisions", "tasks"],
+  filter: { phase: 2 }
+})
 ```
 
 ## Context Management
-- Clear context after analyze phase if > 20 files analyzed
-- Re-read memory.md at implement start
+- After analysis phase: implementer queries analysis decisions via get_context
+- After implementation: reviewer queries implementation decisions via get_context
+- No need to clear context - MCP provides filtered queries

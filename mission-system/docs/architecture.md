@@ -1,7 +1,7 @@
 # Mission System Architecture
 
 <system_overview>
-Framework for orchestrated multi-agent workflows with shared memory.
+Framework for orchestrated multi-agent workflows with MCP-based state tracking.
 Location: `~/.claude/` (global) + `/project/.claude/missions/` (per-project)
 </system_overview>
 
@@ -12,37 +12,52 @@ Location: `~/.claude/` (global) + `/project/.claude/missions/` (per-project)
 ├── agents/mission-architect.md     # Meta-agent: creates missions
 ├── docs/mission-system/
 │   ├── architecture.md             # This file
+│   ├── orchestrator-guide.md       # MCP orchestration patterns
+│   ├── agent-integration.md        # External agent MCP guide
+│   ├── mcp-instructions.md         # Reusable MCP templates
 │   ├── templates/{mission,workflow,agent}.md
 │   └── profiles/{simple,standard,complex}.md
 
 /project/.claude/
 ├── CLAUDE.md                       # Project config (updated by architect)
 └── missions/<name>/
-    ├── mission.md                  # Objectives, scope, constraints
-    ├── workflow.md                 # Phases, agents, transitions
-    ├── start.md                    # Executable prompt to launch orchestrator
-    ├── memory.md                   # Shared state (created at runtime)
+    ├── mission.md                  # Objectives, scope, constraints + mission_id
+    ├── workflow.md                 # Phases, agents, transitions + phase numbers
+    ├── start.md                    # Executable prompt for MCP orchestrator
     └── agents/                     # Mission-specific agents (optional)
 ```
 
 ## Core Concepts
 
+### MCP-Based State Tracking
+
+**All state is managed via MCP tools** - no file-based memory.
+
+| State Type | MCP Tool | Description |
+|------------|----------|-------------|
+| Mission lifecycle | `start_mission`, `complete_mission` | Create/finalize missions |
+| Task lifecycle | `start_task`, `complete_task` | Track task execution |
+| Decisions | `log_decision` | Architectural choices |
+| Progress | `log_milestone` | Progress updates (with %) |
+| Blockers | `log_issue` | Problems requiring attention |
+| Context query | `get_context` | Read previous state |
+
 ### Orchestrator
 - Main agent executing the workflow
 - Reads mission.md + workflow.md at start
-- Launches sub-agents per phase
-- Updates/reads memory.md between phases
+- Uses MCP tools for all state tracking
+- Launches sub-agents per phase via Task tool
 - NEVER delegates orchestration (no nested sub-agents)
 
 ### Sub-Agents
 - Isolated context window per agent
 - Return distilled summary to orchestrator
-- Read memory.md for context
-- Write to memory.md for state updates
+- Use MCP tools for state tracking
+- Query previous phase decisions via `get_context`
 - Single responsibility per agent
 
 ### Sub-Agent Type Rules
-> ⚠️ **CRITICAL**: Agents that write files MUST use `subagent_type: "general-purpose"`
+> **CRITICAL**: Agents that write files MUST use `subagent_type: "general-purpose"`
 
 | Agent Purpose | subagent_type | Required Tools |
 |---------------|---------------|----------------|
@@ -53,24 +68,18 @@ Location: `~/.claude/` (global) + `/project/.claude/missions/` (per-project)
 
 **Why**: `Explore` agents are read-only. Any agent producing file outputs needs `general-purpose`.
 
-### Shared Memory (memory.md)
-- Created at runtime by orchestrator (no static template)
-- Structure adapted to mission needs
-- Compact format, no redundancy
-- Sections: Decisions | Progress | Blockers | Next-Agent-Context
-
 ## Workflow Execution
 
 <execution_flow>
 1. Orchestrator reads mission.md, workflow.md
 2. FOR each phase in workflow:
-   a. Read memory.md (if exists)
-   b. Launch sub-agent(s) for phase
+   a. start_task({caller_type: "orchestrator", phase: N})
+   b. Launch sub-agent(s) for phase via Task tool
    c. Receive summaries
-   d. Update memory.md
-   e. Check phase completion criteria
-3. IF blocker → write to memory.md, STOP, request human help
-4. Final phase: generate summary report
+   d. complete_task({phase_complete: true})
+   e. get_context({include: ["blockers"]}) → check blockers
+3. IF blocker with requiresHumanReview → STOP, request human help
+4. complete_mission({status, summary})
 </execution_flow>
 
 ### Parallel vs Sequential
@@ -83,15 +92,15 @@ parallel: false  → One agent at a time (default)
 | Condition | Action |
 |-----------|--------|
 | Workflow > 5 phases | Consider /clear between major phases |
-| After /clear | Re-read mission.md + memory.md |
-| Sub-agent scope | Only load relevant memory sections |
+| After /clear | Re-read mission.md |
+| Sub-agent needs context | Query via get_context with phase filter |
 
 ## Error Handling
 
 <on_blocker>
-1. Sub-agent writes to memory.md → Blockers section
+1. Sub-agent calls log_issue with requiresHumanReview: true
 2. Sub-agent returns error summary to orchestrator
-3. Orchestrator adds context to Blockers
+3. Orchestrator detects via get_context({include: ["blockers"]})
 4. Orchestrator STOPS workflow
 5. Orchestrator requests human intervention with:
    - Blocker description
@@ -115,68 +124,31 @@ When workflow involves code changes:
 - **Types**: `feat`, `fix`, `refactor`, `chore`, `docs`, `test`
 - **Forbidden**: NO mention of "Claude Code", "Claude", "AI", or "generated"
 - **Frequency**: Commit after each logical group of changes
-- **Documentation**: List commits in memory.md Progress section
 
-### Analysis Report Requirements
-No rigid template, but analysis outputs MUST include:
+## MCP Tool Reference
 
-| Element | Purpose | Required |
-|---------|---------|----------|
-| Findings/Violations | What was discovered | ✅ |
-| Severity levels | Prioritization (HIGH/MED/LOW) | ✅ |
-| Action plan | What to do | ✅ |
-| Dependencies | Execution order if applicable | If needed |
-| Scope confirmation | What was covered | ✅ |
-| Metrics targets | Before/after expectations | If applicable |
+### Lifecycle Tools
 
-Format is flexible - adapt to mission needs.
+| Tool | Input | Output | When |
+|------|-------|--------|------|
+| `start_mission` | name, objective, profile | mission_id | Mission creation |
+| `start_task` | mission_id, phase, caller_type, name, goal | task_id | Task start |
+| `complete_task` | task_id, status, outcome, phase_complete | duration, files | Task end |
+| `complete_mission` | mission_id, status, summary | total metrics | Mission end |
 
-### Memory.md Guidelines
-No fixed template - structure adapts to mission. But follow these rules:
+### Logging Tools
 
-**Required Elements** (always include):
-- Header with mission name, timestamp, current phase
-- Decisions section (append-only log)
-- Progress tracking
-- Blockers if any
+| Tool | Input | Output | When |
+|------|-------|--------|------|
+| `log_decision` | task_id, category, question, chosen | decision_id | Architectural choice |
+| `log_milestone` | task_id, message, progress | milestone_id | Progress update |
+| `log_issue` | task_id, type, description, severity | issue_id | Problem/blocker |
 
-**Recommended Tracking** (when applicable):
-| Metric | When to Track |
-|--------|---------------|
-| Commits | Code implementation missions |
-| Files created/modified | Refactoring, restructuring |
-| Violations fixed | Quality improvement missions |
-| Test results | Any mission with tests |
+### Query Tools
 
-**Format Rules**:
-- Append-only for Decisions (never delete, only add)
-- Update Progress in-place (current state)
-- Compact - no prose, use tables/lists
-- Each agent update adds timestamp
-
-**Example Structure** (adapt as needed):
-```markdown
-# Memory: <mission_name>
-Updated: <ISO-timestamp>
-Phase: <current>/<total>
-
-## Decisions
-- [ts] Decision (rationale)
-
-## Progress
-| Component | Status | Notes |
-|-----------|--------|-------|
-
-## Metrics
-| Metric | Count |
-|--------|-------|
-
-## Blockers
-- [ ] Description → impact
-
-## Context for Next Agent
-<Minimal info needed for next phase>
-```
+| Tool | Input | Output | When |
+|------|-------|--------|------|
+| `get_context` | mission_id, include, filter | context data | Need previous state |
 
 ## Schema: workflow.md
 
@@ -184,17 +156,20 @@ Phase: <current>/<total>
 name: workflow-name
 phases:
   - id: phase-id
+    number: 1
     name: Human readable name
     agents:
-      - type: agent-type-or-path
+      - type: agent-type
+        subagent_type: "general-purpose"
         scope: what this agent handles
     parallel: false
     outputs:
-      - memory.md#Progress
+      - log_decision: key choices
     completion: all agents return success
 
   - id: next-phase
-    requires: phase-id
+    number: 2
+    requires: 1
     checkpoint: human  # Optional: pause for approval
 ```
 
@@ -205,7 +180,8 @@ phases:
 - No circular phase dependencies
 - Scopes must not overlap within parallel agents
 - Each phase must have completion criteria
-- Outputs must be valid memory.md sections or file paths
+- All file-writing agents must use subagent_type: "general-purpose"
+- All phases must have explicit number field
 </validation>
 
 ## Integration with CLAUDE.md
@@ -215,11 +191,12 @@ When mission-architect creates a mission, it adds to project CLAUDE.md:
 ```markdown
 ## Active Mission
 Mission: <name>
+Mission ID: `<mission_id>`
 Path: .claude/missions/<name>/
 Status: <phase>
 
 ### Quick Commands
-- "continue mission" → Resume from current phase
-- "mission status" → Show progress from memory.md
-- "abort mission" → Stop and document state
+- "continue mission" → Resume using get_context
+- "mission status" → Query via get_context
+- "abort mission" → Call complete_mission(failed)
 ```

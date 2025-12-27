@@ -13,14 +13,14 @@
    ┌────│ Analyzer-1 │
    │    └────────────┘
    │    ┌────────────┐
-───┼────│ Analyzer-2 │────┐
+───┼────│ Analyzer-2 │────┐   Phase 1 (Parallel)
    │    └────────────┘    │
    │    ┌────────────┐    │
    └────│ Analyzer-3 │    │
         └────────────┘    │
                           ▼
                    ┌────────────┐
-              ┌────│   Planner  │
+              ┌────│   Planner  │   Phase 2
               │    └────────────┘
               │
               ▼
@@ -28,14 +28,14 @@
    ┌────│  Impl-1    │
    │    └────────────┘
    │    ┌────────────┐
-───┼────│  Impl-2    │────┐
+───┼────│  Impl-2    │────┐   Phase 3 (Parallel)
    │    └────────────┘    │
    │    ┌────────────┐    │
    └────│  Impl-3    │    │
         └────────────┘    │
                           ▼
                    ┌────────────┐
-                   │  Reviewer  │
+                   │  Reviewer  │   Phase 4
                    └────────────┘
 ```
 
@@ -44,52 +44,63 @@
 ```yaml
 phases:
   - id: analyze
+    number: 1
     name: Parallel Analysis
     agents:
       - type: analyzer
+        subagent_type: "general-purpose"
         scope: <scope-1>
       - type: analyzer
+        subagent_type: "general-purpose"
         scope: <scope-2>
       - type: analyzer
+        subagent_type: "general-purpose"
         scope: <scope-3>
     parallel: true  # All 3 run concurrently
     outputs:
-      - memory.md#Analysis-<scope>
+      - log_decision: analysis findings per scope
     completion: all analyzers complete
 
   - id: plan
+    number: 2
     name: Consolidate & Plan
-    requires: analyze
+    requires: 1
     checkpoint: human  # Review analysis before proceeding
     agents:
       - type: planner
+        subagent_type: "general-purpose"
         scope: synthesize analyses, create implementation plan
     parallel: false
     outputs:
-      - memory.md#Implementation-Plan
-      - memory.md#Risk-Assessment
+      - log_decision: implementation plan, risk assessment
     completion: plan approved
 
   - id: implement
+    number: 3
     name: Parallel Implementation
-    requires: plan
+    requires: 2
     agents:
       - type: implementer
+        subagent_type: "general-purpose"
         scope: <scope-1>
       - type: implementer
+        subagent_type: "general-purpose"
         scope: <scope-2>
       - type: implementer
+        subagent_type: "general-purpose"
         scope: <scope-3>
     parallel: true  # Ensure scopes don't overlap!
     outputs:
-      - memory.md#Progress
+      - log_milestone: progress per scope
     completion: all implementations done
 
   - id: review
+    number: 4
     name: Final Review
-    requires: implement
+    requires: 3
     agents:
       - type: reviewer
+        subagent_type: "general-purpose"
         scope: full mission validation
     parallel: false
     outputs:
@@ -97,51 +108,83 @@ phases:
     completion: all criteria met
 ```
 
-## Memory Structure
-```markdown
-# Memory: <mission>
-Updated: <ts>
-Phase: 1/4
+## MCP Integration
 
-## Analysis: <scope-1>
-<Compact findings>
+### Orchestrator Flow for Parallel Phases
+```
+# Phase 1: Parallel Analysis
+start_task({mission_id, phase: 1, caller_type: "orchestrator", name: "Phase 1: Parallel Analysis"})
 
-## Analysis: <scope-2>
-<Compact findings>
+# Launch all analyzers in parallel (single message with multiple Task calls)
+Task({prompt: "Analyzer-1..."})
+Task({prompt: "Analyzer-2..."})
+Task({prompt: "Analyzer-3..."})
 
-## Analysis: <scope-3>
-<Compact findings>
+# Wait for all to complete, then:
+complete_task({task_id, phase_complete: true})
 
-## Implementation Plan
-| Scope | Priority | Dependencies | Risk |
-|-------|----------|--------------|------|
+# Check blockers
+get_context({mission_id, include: ["blockers"], filter: {phase: 1}})
 
-## Risk Assessment
-| Risk | Mitigation | Owner |
-|------|------------|-------|
+# Phase 2: Planning (human checkpoint)
+[Wait for human approval if configured]
+```
 
-## Decisions
-- [ts] <decision>
+### Sub-Agent: Planner
+Reads all analysis decisions:
+```
+get_context({
+  mission_id: "...",
+  include: ["decisions"],
+  filter: { phase: 1 }
+})
+```
 
-## Progress
-| Scope | Component | Status | Notes |
-|-------|-----------|--------|-------|
+### Sub-Agent: Implementer (Scoped)
+Each implementer reads only the plan and their scope:
+```
+get_context({
+  mission_id: "...",
+  include: ["decisions"],
+  filter: { phase: 2 }
+})
+```
 
-## Blockers
-- [ ] <blocker> → <impact> → <scope affected>
-
-## Integration Notes
-<Cross-scope dependencies, merge order, etc.>
+### Sub-Agent: Reviewer
+Reads all implementation progress:
+```
+get_context({
+  mission_id: "...",
+  include: ["decisions", "milestones", "tasks"],
+  filter: { phase: 3 }
+})
 ```
 
 ## Context Management Rules
-1. /clear after analyze phase (mandatory)
-2. /clear after plan phase (mandatory)
-3. Each implementer only reads their scope section
-4. Reviewer gets fresh context with full memory.md
+1. /clear after analyze phase if context is large
+2. /clear after plan phase before implementation
+3. Each implementer queries only their relevant scope decisions
+4. Reviewer gets fresh context via get_context queries
 
 ## Scope Isolation
 CRITICAL: Define scopes that do NOT overlap:
 - By directory: `src/api/`, `src/ui/`, `src/core/`
 - By feature: `auth`, `payments`, `notifications`
 - By layer: `models`, `services`, `controllers`
+
+## Blocker Escalation
+For parallel phases, any blocker stops the entire phase:
+```
+log_issue({
+  task_id: "...",
+  type: "blocker",
+  description: "Circular dependency found in scope-2",
+  severity: "high",
+  requiresHumanReview: true
+})
+```
+
+Orchestrator detects via:
+```
+get_context({mission_id, include: ["blockers"], filter: {phase: 1}})
+```
