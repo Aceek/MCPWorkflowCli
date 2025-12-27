@@ -3,11 +3,14 @@
 import Link from 'next/link'
 import type { Workflow, Task, Decision, Issue, Milestone } from '@prisma/client'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Wifi, WifiOff, ClipboardList, Calendar, ListTodo, Clock, Zap, Layers } from 'lucide-react'
+import { useState } from 'react'
+import { ArrowLeft, Wifi, WifiOff, ClipboardList, Calendar, ListTodo, Clock, Zap, Layers, GitBranch, List } from 'lucide-react'
 import { useRealtimeWorkflow } from '@/hooks/useRealtimeWorkflow'
 import { StatusBadge } from '../shared/StatusBadge'
 import { TaskTree } from '../task/TaskTree'
 import { PhaseTimeline } from './PhaseTimeline'
+import { WorkflowGraph } from './WorkflowGraph'
+import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -39,6 +42,7 @@ interface RealtimeWorkflowDetailProps {
 export function RealtimeWorkflowDetail({
   initialWorkflow,
 }: RealtimeWorkflowDetailProps) {
+  const [viewMode, setViewMode] = useState<'graph' | 'timeline'>('graph')
   const { workflow, isConnected, lastUpdate } = useRealtimeWorkflow({
     workflowId: initialWorkflow.id,
     initialData: initialWorkflow,
@@ -181,20 +185,66 @@ export function RealtimeWorkflowDetail({
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
         >
-          <div className="flex items-center gap-2 mb-4">
-            <Layers className="h-5 w-5 text-[hsl(var(--muted-foreground))]" />
-            <h2 className="text-xl font-semibold text-[hsl(var(--foreground))]">
-              Phases
-            </h2>
-            <span className="text-sm text-[hsl(var(--muted-foreground))]">
-              ({workflow.phases!.length})
-            </span>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Layers className="h-5 w-5 text-[hsl(var(--muted-foreground))]" />
+              <h2 className="text-xl font-semibold text-[hsl(var(--foreground))]">
+                Phases
+              </h2>
+              <span className="text-sm text-[hsl(var(--muted-foreground))]">
+                ({workflow.phases!.length})
+              </span>
+            </div>
+
+            {/* View toggle */}
+            <div className="flex items-center gap-1 p-1 rounded-lg bg-[hsl(var(--muted))]">
+              <Button
+                variant={viewMode === 'graph' ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('graph')}
+                className="h-8 px-3 gap-1.5"
+              >
+                <GitBranch className="h-4 w-4" />
+                Graph
+              </Button>
+              <Button
+                variant={viewMode === 'timeline' ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('timeline')}
+                className="h-8 px-3 gap-1.5"
+              >
+                <List className="h-4 w-4" />
+                Timeline
+              </Button>
+            </div>
           </div>
 
-          <PhaseTimeline
-            phases={workflow.phases!}
-            currentPhase={currentPhase}
-          />
+          <AnimatePresence mode="wait">
+            {viewMode === 'graph' ? (
+              <motion.div
+                key="graph"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                transition={{ duration: 0.2 }}
+              >
+                <WorkflowGraph phases={workflow.phases!} />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="timeline"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.2 }}
+              >
+                <PhaseTimeline
+                  phases={workflow.phases!}
+                  currentPhase={currentPhase}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
       )}
 

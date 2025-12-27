@@ -21,6 +21,7 @@ import {
   CollapsibleContent,
 } from '@/components/ui/collapsible'
 import { StatusBadge } from '../shared/StatusBadge'
+import { AgentBadge } from '../workflow/AgentBadge'
 import { DecisionCard } from './DecisionCard'
 import { IssueCard } from './IssueCard'
 import { FilesList } from './FilesList'
@@ -83,9 +84,17 @@ export function TaskCard({
         <CardHeader className="p-4 pb-3">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-[hsl(var(--foreground))] truncate">
-                {task.name}
-              </h3>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="font-semibold text-[hsl(var(--foreground))] truncate">
+                  {task.name}
+                </h3>
+                {task.agentName && (
+                  <AgentBadge
+                    agentName={task.agentName}
+                    callerType={task.callerType}
+                  />
+                )}
+              </div>
               <p className="mt-1 text-sm text-[hsl(var(--muted-foreground))] line-clamp-2">
                 {task.goal}
               </p>

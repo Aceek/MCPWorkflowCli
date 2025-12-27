@@ -4,7 +4,9 @@ import { useSearchParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { RefreshCw, Wifi, WifiOff, ClipboardList } from 'lucide-react'
 import { useRealtimeWorkflows } from '@/hooks/useRealtimeWorkflows'
+import { useBlockers } from '@/hooks/useBlockers'
 import { WorkflowCard } from './WorkflowCard'
+import { BlockersPanel } from './BlockersPanel'
 import { StatsCards, StatusFilter, WorkflowCardSkeleton, StatsSkeleton } from '../shared'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -37,6 +39,8 @@ export function RealtimeWorkflowList() {
   } = useRealtimeWorkflows({
     status,
   })
+
+  const { blockers } = useBlockers()
 
   if (error) {
     return (
@@ -160,6 +164,15 @@ export function RealtimeWorkflowList() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Blockers Panel */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+      >
+        <BlockersPanel blockers={blockers} />
+      </motion.div>
 
       {/* Filters and count */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
