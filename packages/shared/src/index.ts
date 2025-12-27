@@ -9,7 +9,7 @@
  * in the MCP Workflow Tracker monorepo. It provides:
  *
  * - **Prisma Client**: Database ORM for SQLite with type-safe queries
- * - **Database Models**: Workflow, Task, Decision, Issue, Milestone
+ * - **Database Models**: Workflow, Task, Decision, Issue, Milestone, Phase
  * - **Type-Safe Enums**: Status and category enums for application-level type safety
  *
  * ## Database Provider
@@ -30,6 +30,7 @@
  * const workflow = await prisma.workflow.create({
  *   data: {
  *     name: 'Feature Implementation',
+ *     objective: 'Implement user authentication',
  *     status: WorkflowStatus.IN_PROGRESS
  *   }
  * })
@@ -46,7 +47,6 @@ export {
   type Milestone,
   type Prisma,
   type ServerInfo,
-  type Mission,
   type Phase,
 } from '@prisma/client'
 
@@ -55,12 +55,35 @@ export {
 // Defined here for type safety in the application
 // ============================================
 
+/**
+ * Workflow status enum
+ * - PENDING: Workflow created but not yet started
+ * - IN_PROGRESS: Workflow is currently executing
+ * - COMPLETED: Workflow finished successfully
+ * - FAILED: Workflow failed
+ * - BLOCKED: Workflow is waiting for human intervention
+ */
 export const WorkflowStatus = {
+  PENDING: 'PENDING',
   IN_PROGRESS: 'IN_PROGRESS',
   COMPLETED: 'COMPLETED',
   FAILED: 'FAILED',
+  BLOCKED: 'BLOCKED',
 } as const
 export type WorkflowStatus = (typeof WorkflowStatus)[keyof typeof WorkflowStatus]
+
+/**
+ * Workflow profile enum (complexity level)
+ * - SIMPLE: 2 phases
+ * - STANDARD: 3 phases
+ * - COMPLEX: 4+ phases, parallel execution possible
+ */
+export const WorkflowProfile = {
+  SIMPLE: 'SIMPLE',
+  STANDARD: 'STANDARD',
+  COMPLEX: 'COMPLEX',
+} as const
+export type WorkflowProfile = (typeof WorkflowProfile)[keyof typeof WorkflowProfile]
 
 export const TaskStatus = {
   IN_PROGRESS: 'IN_PROGRESS',
@@ -94,26 +117,6 @@ export const TestsStatus = {
   NOT_RUN: 'NOT_RUN',
 } as const
 export type TestsStatus = (typeof TestsStatus)[keyof typeof TestsStatus]
-
-// ============================================
-// MISSION SYSTEM ENUMS
-// ============================================
-
-export const MissionProfile = {
-  SIMPLE: 'SIMPLE',     // 2 phases
-  STANDARD: 'STANDARD', // 3 phases
-  COMPLEX: 'COMPLEX',   // 4+ phases, parallel
-} as const
-export type MissionProfile = (typeof MissionProfile)[keyof typeof MissionProfile]
-
-export const MissionStatus = {
-  PENDING: 'PENDING',
-  IN_PROGRESS: 'IN_PROGRESS',
-  COMPLETED: 'COMPLETED',
-  FAILED: 'FAILED',
-  BLOCKED: 'BLOCKED', // Waiting for human intervention
-} as const
-export type MissionStatus = (typeof MissionStatus)[keyof typeof MissionStatus]
 
 export const PhaseStatus = {
   PENDING: 'PENDING',

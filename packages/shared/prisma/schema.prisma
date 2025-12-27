@@ -20,18 +20,58 @@ model Workflow {
   name        String
   description String?
   plan        String?  // JSON string
-  status      String   @default("IN_PROGRESS") // WorkflowStatus enum
+
+  // Mission fields (merged from Mission model)
+  objective    String?  // Measurable goal
+  scope        String?  // What's included/excluded
+  constraints  String?  // Technical limits
+  profile      String   @default("STANDARD") // WorkflowProfile: SIMPLE | STANDARD | COMPLEX
+
+  // Execution state
+  status       String   @default("PENDING") // WorkflowStatus: PENDING | IN_PROGRESS | COMPLETED | FAILED | BLOCKED
+  currentPhase Int      @default(0)
+  totalPhases  Int      @default(1)
+
+  // Metadata
+  missionPath String?  // .claude/missions/<name>/
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  completedAt DateTime?
 
   // Aggregated metrics (computed on task completion)
   totalDurationMs Int? // Sum of all task durations
   totalTokens     Int? // Sum of all tokens (input + output)
 
-  tasks Task[]
+  // Relations
+  tasks  Task[]
+  phases Phase[]
 
   @@index([status])
   @@index([createdAt])
+}
+
+model Phase {
+  id         String   @id @default(cuid())
+  workflowId String
+  workflow   Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  number      Int     // Phase sequence (1, 2, 3...)
+  name        String
+  description String?
+
+  // Execution
+  status     String  @default("PENDING") // PhaseStatus: PENDING | IN_PROGRESS | COMPLETED | FAILED
+  isParallel Boolean @default(false)     // Can tasks run in parallel?
+
+  // Timing
+  startedAt   DateTime?
+  completedAt DateTime?
+
+  // Relations
+  tasks Task[]
+
+  @@unique([workflowId, number])
+  @@index([workflowId])
 }
 
 model Task {
@@ -42,7 +82,7 @@ model Task {
   goal         String
   status       String   @default("IN_PROGRESS") // TaskStatus enum
 
-  // Mission system: Phase relation (optional for backward compat)
+  // Phase relation (optional for backward compat)
   phaseId String?
   phase   Phase?  @relation(fields: [phaseId], references: [id], onDelete: Cascade)
 
@@ -165,62 +205,4 @@ model ServerInfo {
   startedAt     DateTime @default(now())
   lastHeartbeat DateTime @default(now())
   processId     Int?     // PID for debugging
-}
-
-// ============================================
-// MISSION SYSTEM MODELS
-// Note: Enums stored as TEXT, types defined in @mission-control/shared
-// ============================================
-
-model Mission {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-
-  // Mission-specific
-  objective   String   // Measurable goal
-  scope       String?  // What's included/excluded
-  constraints String?  // Technical limits
-  profile     String   @default("STANDARD") // MissionProfile: SIMPLE | STANDARD | COMPLEX
-
-  // Execution state
-  status       String @default("PENDING") // MissionStatus: PENDING | IN_PROGRESS | COMPLETED | FAILED | BLOCKED
-  currentPhase Int    @default(0)
-  totalPhases  Int    @default(1)
-
-  // Metadata
-  missionPath String? // .claude/missions/<name>/
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  completedAt DateTime?
-
-  // Relations
-  phases Phase[]
-
-  @@index([status])
-  @@index([createdAt])
-}
-
-model Phase {
-  id        String  @id @default(cuid())
-  missionId String
-  mission   Mission @relation(fields: [missionId], references: [id], onDelete: Cascade)
-
-  number      Int     // Phase sequence (1, 2, 3...)
-  name        String
-  description String?
-
-  // Execution
-  status     String  @default("PENDING") // PhaseStatus: PENDING | IN_PROGRESS | COMPLETED | FAILED
-  isParallel Boolean @default(false)     // Can tasks run in parallel?
-
-  // Timing
-  startedAt   DateTime?
-  completedAt DateTime?
-
-  // Relations
-  tasks Task[]
-
-  @@unique([missionId, number])
-  @@index([missionId])
 }

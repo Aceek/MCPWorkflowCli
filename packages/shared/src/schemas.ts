@@ -16,16 +16,29 @@ import { z } from 'zod'
 
 /**
  * Workflow status enum values
+ * - PENDING: Workflow created but not yet started
  * - IN_PROGRESS: Workflow is currently executing
  * - COMPLETED: Workflow finished successfully
- * - FAILED: Workflow failed or had partial success
+ * - FAILED: Workflow failed
+ * - BLOCKED: Workflow is waiting for human intervention
  */
 export const WorkflowStatusSchema = z.enum([
+  'PENDING',
   'IN_PROGRESS',
   'COMPLETED',
   'FAILED',
+  'BLOCKED',
 ])
 export type WorkflowStatusEnum = z.infer<typeof WorkflowStatusSchema>
+
+/**
+ * Workflow profile enum values (complexity level)
+ * - SIMPLE: 2 phases
+ * - STANDARD: 3 phases
+ * - COMPLEX: 4+ phases, parallel execution possible
+ */
+export const WorkflowProfileSchema = z.enum(['SIMPLE', 'STANDARD', 'COMPLEX'])
+export type WorkflowProfileEnum = z.infer<typeof WorkflowProfileSchema>
 
 /**
  * Task status enum values
@@ -41,6 +54,21 @@ export const TaskStatusSchema = z.enum([
   'FAILED',
 ])
 export type TaskStatusEnum = z.infer<typeof TaskStatusSchema>
+
+/**
+ * Phase status enum values
+ * - PENDING: Phase not yet started
+ * - IN_PROGRESS: Phase is currently executing
+ * - COMPLETED: Phase finished successfully
+ * - FAILED: Phase failed
+ */
+export const PhaseStatusSchema = z.enum([
+  'PENDING',
+  'IN_PROGRESS',
+  'COMPLETED',
+  'FAILED',
+])
+export type PhaseStatusEnum = z.infer<typeof PhaseStatusSchema>
 
 /**
  * Decision category enum values
@@ -94,11 +122,20 @@ export type TestsStatusEnum = z.infer<typeof TestsStatusSchema>
  * Maps to WorkflowStatusSchema internally
  */
 export const WorkflowStatusInputSchema = z.enum([
+  'pending',
   'in_progress',
   'completed',
   'failed',
+  'blocked',
 ])
 export type WorkflowStatusInput = z.infer<typeof WorkflowStatusInputSchema>
+
+/**
+ * MCP input schema for workflow profile (snake_case)
+ * Maps to WorkflowProfileSchema internally
+ */
+export const WorkflowProfileInputSchema = z.enum(['simple', 'standard', 'complex'])
+export type WorkflowProfileInput = z.infer<typeof WorkflowProfileInputSchema>
 
 /**
  * MCP input schema for task status (snake_case)
@@ -110,6 +147,18 @@ export const TaskStatusInputSchema = z.enum([
   'failed',
 ])
 export type TaskStatusInput = z.infer<typeof TaskStatusInputSchema>
+
+/**
+ * MCP input schema for phase status (snake_case)
+ * Maps to PhaseStatusSchema internally
+ */
+export const PhaseStatusInputSchema = z.enum([
+  'pending',
+  'in_progress',
+  'completed',
+  'failed',
+])
+export type PhaseStatusInput = z.infer<typeof PhaseStatusInputSchema>
 
 /**
  * MCP input schema for decision category (snake_case)

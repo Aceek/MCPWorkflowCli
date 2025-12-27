@@ -4,11 +4,33 @@ CREATE TABLE "Workflow" (
     "name" TEXT NOT NULL,
     "description" TEXT,
     "plan" TEXT,
-    "status" TEXT NOT NULL DEFAULT 'IN_PROGRESS',
+    "objective" TEXT,
+    "scope" TEXT,
+    "constraints" TEXT,
+    "profile" TEXT NOT NULL DEFAULT 'STANDARD',
+    "status" TEXT NOT NULL DEFAULT 'PENDING',
+    "currentPhase" INTEGER NOT NULL DEFAULT 0,
+    "totalPhases" INTEGER NOT NULL DEFAULT 1,
+    "missionPath" TEXT,
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" DATETIME NOT NULL,
+    "completedAt" DATETIME,
     "totalDurationMs" INTEGER,
     "totalTokens" INTEGER
+);
+
+-- CreateTable
+CREATE TABLE "Phase" (
+    "id" TEXT NOT NULL PRIMARY KEY,
+    "workflowId" TEXT NOT NULL,
+    "number" INTEGER NOT NULL,
+    "name" TEXT NOT NULL,
+    "description" TEXT,
+    "status" TEXT NOT NULL DEFAULT 'PENDING',
+    "isParallel" BOOLEAN NOT NULL DEFAULT false,
+    "startedAt" DATETIME,
+    "completedAt" DATETIME,
+    CONSTRAINT "Phase_workflowId_fkey" FOREIGN KEY ("workflowId") REFERENCES "Workflow" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- CreateTable
@@ -19,6 +41,10 @@ CREATE TABLE "Task" (
     "name" TEXT NOT NULL,
     "goal" TEXT NOT NULL,
     "status" TEXT NOT NULL DEFAULT 'IN_PROGRESS',
+    "phaseId" TEXT,
+    "callerType" TEXT,
+    "agentName" TEXT,
+    "agentPrompt" TEXT,
     "areas" TEXT NOT NULL DEFAULT '[]',
     "snapshotId" TEXT,
     "snapshotType" TEXT,
@@ -44,6 +70,7 @@ CREATE TABLE "Task" (
     "scopeMatch" BOOLEAN,
     "unexpectedFiles" TEXT NOT NULL DEFAULT '[]',
     "warnings" TEXT NOT NULL DEFAULT '[]',
+    CONSTRAINT "Task_phaseId_fkey" FOREIGN KEY ("phaseId") REFERENCES "Phase" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT "Task_workflowId_fkey" FOREIGN KEY ("workflowId") REFERENCES "Workflow" ("id") ON DELETE CASCADE ON UPDATE CASCADE,
     CONSTRAINT "Task_parentTaskId_fkey" FOREIGN KEY ("parentTaskId") REFERENCES "Task" ("id") ON DELETE SET NULL ON UPDATE CASCADE
 );
@@ -101,6 +128,12 @@ CREATE INDEX "Workflow_status_idx" ON "Workflow"("status");
 CREATE INDEX "Workflow_createdAt_idx" ON "Workflow"("createdAt");
 
 -- CreateIndex
+CREATE INDEX "Phase_workflowId_idx" ON "Phase"("workflowId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "Phase_workflowId_number_key" ON "Phase"("workflowId", "number");
+
+-- CreateIndex
 CREATE INDEX "Task_workflowId_idx" ON "Task"("workflowId");
 
 -- CreateIndex
@@ -111,6 +144,15 @@ CREATE INDEX "Task_status_idx" ON "Task"("status");
 
 -- CreateIndex
 CREATE INDEX "Task_startedAt_idx" ON "Task"("startedAt");
+
+-- CreateIndex
+CREATE INDEX "Task_phaseId_idx" ON "Task"("phaseId");
+
+-- CreateIndex
+CREATE INDEX "Task_callerType_idx" ON "Task"("callerType");
+
+-- CreateIndex
+CREATE INDEX "Task_agentName_idx" ON "Task"("agentName");
 
 -- CreateIndex
 CREATE INDEX "Decision_taskId_idx" ON "Decision"("taskId");
@@ -129,3 +171,4 @@ CREATE INDEX "Milestone_taskId_idx" ON "Milestone"("taskId");
 
 -- CreateIndex
 CREATE INDEX "Milestone_createdAt_idx" ON "Milestone"("createdAt");
+
