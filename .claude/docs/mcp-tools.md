@@ -1,19 +1,21 @@
 # MCP Tools
 
-8 tools for workflow orchestration and tracking.
+10 tools for workflow orchestration and tracking.
 
 ## Overview
 
-| Tool | Purpose | Frequency |
-|------|---------|-----------|
-| `start_workflow` | Create workflow with profile | 1x/workflow |
-| `complete_workflow` | Finalize with summary + metrics | 1x/workflow |
-| `get_context` | Query state (decisions, blockers) | 0-N/workflow |
-| `start_task` | Start task + Git snapshot | 1x/task |
-| `complete_task` | Complete task + Git diff | 1x/task |
-| `log_decision` | Architectural decision | 0-3/task |
-| `log_issue` | Problem/blocker | 0-3/task |
-| `log_milestone` | Progress update | 0-5/task |
+| Tool | Purpose | Caller | Frequency |
+|------|---------|--------|-----------|
+| `start_workflow` | Create workflow with profile | Orchestrator | 1x/workflow |
+| `complete_workflow` | Finalize with summary + metrics | Orchestrator | 1x/workflow |
+| `get_context` | Query state (decisions, blockers) | Both | 0-N/workflow |
+| `start_phase` | Create phase before launching subagents | Orchestrator | 1x/phase |
+| `complete_phase` | Mark phase as completed/failed | Orchestrator | 1x/phase |
+| `start_task` | Start task within phase + Git snapshot | Subagent | 1x/task |
+| `complete_task` | Complete task + Git diff | Subagent | 1x/task |
+| `log_decision` | Architectural decision | Subagent | 0-3/task |
+| `log_issue` | Problem/blocker | Subagent | 0-3/task |
+| `log_milestone` | Progress update | Subagent | 0-5/task |
 
 ## Workflow Tools
 
@@ -53,22 +55,54 @@
 
 **Returns**: Context data based on `include` array
 
-## Task Tools
+## Phase Tools
 
-### start_task
+### start_phase
+
+Called by orchestrator BEFORE launching subagents. Creates a phase container.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `workflow_id` | string | yes | Workflow ID |
-| `phase` | number | no | Phase number (auto-creates) |
-| `phase_name` | string | no | Name for auto-created phase |
-| `caller_type` | enum | no | `orchestrator`\|`subagent` |
-| `agent_name` | string | no | For subagent type |
+| `number` | number | yes | Phase number (1, 2, 3...) |
+| `name` | string | yes | Phase name (e.g., "Design Specification") |
+| `description` | string | no | Optional description |
+| `is_parallel` | boolean | no | Can tasks run in parallel? (default: false) |
+
+**Returns**: `{ phase_id, workflow_id, number, name, is_parallel, status, started_at }`
+
+**Idempotent**: If phase already exists, returns existing phase with `already_exists: true`.
+
+### complete_phase
+
+Called by orchestrator AFTER all tasks in the phase are done.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `phase_id` | string | yes | Phase ID from start_phase |
+| `status` | enum | yes | `completed`\|`failed` |
+| `summary` | string | no | Optional summary of phase outcome |
+
+**Returns**: `{ phase_id, workflow_id, number, name, status, completed_at, duration_ms, tasks: { total, success, failed, in_progress }, warnings }`
+
+## Task Tools
+
+### start_task
+
+Called by subagent at the start of their work. Creates Git snapshot.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `workflow_id` | string | yes | Workflow ID |
+| `phase_id` | string | yes | Phase ID (from start_phase) |
+| `caller_type` | enum | yes | `orchestrator`\|`subagent` |
+| `agent_name` | string | conditional | Required when caller_type is `subagent` |
 | `name` | string | yes | Task name |
 | `goal` | string | yes | Task goal |
+| `parent_task_id` | string | no | For nested tasks |
 | `areas` | string[] | no | Code areas touched |
 
-**Returns**: `{ task_id, snapshot_id, snapshot_type, phase_id, phase_created }`
+**Returns**: `{ task_id, workflow_id, phase_id, phase_number, phase_name, caller_type, snapshot_id, snapshot_type, started_at }`
 
 **Git Snapshot**: Stores current HEAD hash for diff calculation.
 
@@ -83,7 +117,6 @@
 | `outcome.limitations` | string[] | no |
 | `outcome.next_steps` | string[] | no |
 | `outcome.manual_review_needed` | bool | no |
-| `phase_complete` | bool | no | Mark phase done |
 | `metadata.packages_added` | string[] | no |
 | `metadata.tests_status` | enum | no | `passed`\|`failed`\|`not_run` |
 
@@ -130,14 +163,37 @@
 | `progress` | number | no | 0-100 |
 | `metadata` | object | no |
 
+## Orchestrator Protocol
+
+```
+1. start_workflow({name, objective, ...}) → workflow_id
+2. FOR each phase:
+   a. start_phase({workflow_id, number, name, is_parallel}) → phase_id
+   b. Launch subagents with workflow_id + phase_id
+   c. Subagents: start_task → work → log_* → complete_task
+   d. Monitor: get_context({include: ["tasks", "blockers"]})
+   e. complete_phase({phase_id, status})
+3. complete_workflow({workflow_id, status, summary})
+```
+
+## Subagent Protocol
+
+```
+1. Receive workflow_id + phase_id from orchestrator prompt
+2. start_task({workflow_id, phase_id, caller_type: "subagent", agent_name, name, goal})
+3. Do work
+4. log_milestone(), log_decision(), log_issue() as needed
+5. complete_task({task_id, status, outcome})
+```
+
 ## WebSocket Events
 
 | Event | Trigger |
 |-------|---------|
 | `workflow:created` | start_workflow |
 | `workflow:updated` | complete_workflow, phase changes |
-| `phase:created` | First task of phase |
-| `phase:updated` | complete_task with phase_complete |
+| `phase:created` | start_phase |
+| `phase:updated` | complete_phase |
 | `task:created` | start_task |
 | `task:updated` | complete_task |
 

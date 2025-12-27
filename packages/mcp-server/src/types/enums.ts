@@ -14,6 +14,7 @@ import {
   IssueType,
   TestsStatus,
   CallerType,
+  PhaseStatus,
 } from '@mission-control/shared'
 
 // ============================================
@@ -125,4 +126,5 @@ export {
   IssueType,
   TestsStatus,
   CallerType,
+  PhaseStatus,
 }

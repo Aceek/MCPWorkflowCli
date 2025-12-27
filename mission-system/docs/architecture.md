@@ -35,20 +35,22 @@ Multi-agent workflow orchestration via MCP tools.
 ### State Management
 All state via MCP tools (no file-based memory):
 
-| State | Tool |
-|-------|------|
-| Workflow lifecycle | `start_workflow`, `complete_workflow` |
-| Task lifecycle | `start_task`, `complete_task` |
-| Decisions | `log_decision` |
-| Progress | `log_milestone` |
-| Blockers | `log_issue` |
-| Query | `get_context` |
+| State | Tool | Caller |
+|-------|------|--------|
+| Workflow lifecycle | `start_workflow`, `complete_workflow` | Orchestrator |
+| Phase lifecycle | `start_phase`, `complete_phase` | Orchestrator |
+| Task lifecycle | `start_task`, `complete_task` | Subagent |
+| Decisions | `log_decision` | Subagent |
+| Progress | `log_milestone` | Subagent |
+| Blockers | `log_issue` | Subagent |
+| Query | `get_context` | Both |
 
 ### Orchestrator
 - Reads definition.md + workflow.md at start
-- Executes phases sequentially (or parallel)
-- Launches sub-agents via Task tool with workflow_id
+- Creates phases via `start_phase()` before launching subagents
+- Launches sub-agents via Task tool with workflow_id + phase_id
 - Monitors progress via `get_context()`
+- Completes phases via `complete_phase()` after all tasks done
 - Handles blockers requiring human review
 - Calls `complete_workflow()` when all phases done
 - NEVER delegates orchestration
@@ -67,8 +69,10 @@ Orchestrator                          Subagent
      │                                    │
      ├── start_workflow() → workflow_id   │
      │                                    │
-     ├── Task tool (prompt + workflow_id) ────>│
-     │                                    ├── start_task() → task_id
+     ├── start_phase() → phase_id         │
+     │                                    │
+     ├── Task tool (workflow_id + phase_id) ──>│
+     │                                    ├── start_task({phase_id}) → task_id
      │                                    ├── [does work]
      │                                    ├── log_milestone() (real-time)
      │                                    ├── log_decision() (each choice)
@@ -77,6 +81,8 @@ Orchestrator                          Subagent
      │<── agent done ─────────────────────┤
      │                                    │
      ├── get_context() (monitor)          │
+     ├── complete_phase()                 │
+     │                                    │
      └── complete_workflow()              │
 ```
 
@@ -93,10 +99,12 @@ Orchestrator                          Subagent
 1. Read definition.md, workflow.md
 2. start_workflow() → workflow_id
 3. FOR each phase:
-   a. Launch sub-agent(s) via Task tool (pass workflow_id)
-   b. Subagent manages own MCP calls (start_task → log_* → complete_task)
-   c. Monitor via get_context({include: ["tasks", "blockers"]})
-   d. Check blockers
+   a. start_phase({workflow_id, number, name}) → phase_id
+   b. Launch sub-agent(s) via Task tool (pass workflow_id + phase_id)
+   c. Subagent manages own MCP calls (start_task → log_* → complete_task)
+   d. Monitor via get_context({include: ["tasks", "blockers"]})
+   e. Check blockers
+   f. complete_phase({phase_id, status})
 4. IF blocker → STOP, request human help
 5. complete_workflow()
 ```

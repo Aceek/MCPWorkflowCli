@@ -6,6 +6,7 @@
 
 import type {
   Workflow,
+  Phase,
   Task,
   Decision,
   Issue,
@@ -56,6 +57,16 @@ export interface MilestoneCreatedEvent {
   workflowId: string
 }
 
+export interface PhaseCreatedEvent {
+  phase: Phase
+  workflowId: string
+}
+
+export interface PhaseUpdatedEvent {
+  phase: Phase
+  workflowId: string
+}
+
 // ============================================
 // Event Names (constants for type safety)
 // ============================================
@@ -64,6 +75,9 @@ export const EVENTS = {
   // Workflow events
   WORKFLOW_CREATED: 'workflow:created',
   WORKFLOW_UPDATED: 'workflow:updated',
+  // Phase events
+  PHASE_CREATED: 'phase:created',
+  PHASE_UPDATED: 'phase:updated',
   // Task events
   TASK_CREATED: 'task:created',
   TASK_UPDATED: 'task:updated',
@@ -222,5 +236,31 @@ export function emitMilestoneCreated(
     payload: { milestone, taskId, workflowId } satisfies MilestoneCreatedEvent,
     workflowId,
     logData: { milestoneId: milestone.id, taskId, workflowId },
+  })
+}
+
+/**
+ * Emit a phase created event.
+ */
+export function emitPhaseCreated(phase: Phase, workflowId: string): void {
+  emitEvent({
+    eventName: EVENTS.PHASE_CREATED,
+    payload: { phase, workflowId } satisfies PhaseCreatedEvent,
+    workflowId,
+    broadcastToAll: true,
+    logData: { phaseId: phase.id, phaseNumber: phase.number, workflowId },
+  })
+}
+
+/**
+ * Emit a phase updated event.
+ */
+export function emitPhaseUpdated(phase: Phase, workflowId: string): void {
+  emitEvent({
+    eventName: EVENTS.PHASE_UPDATED,
+    payload: { phase, workflowId } satisfies PhaseUpdatedEvent,
+    workflowId,
+    broadcastToAll: true,
+    logData: { phaseId: phase.id, phaseNumber: phase.number, workflowId },
   })
 }

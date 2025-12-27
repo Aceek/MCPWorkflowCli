@@ -8,14 +8,14 @@ MCP-based orchestration for multi-agent workflows.
 
 | Caller | MCP Access | Role |
 |--------|------------|------|
-| Orchestrator | ✅ Full | Coordinates phases, monitors progress |
+| Orchestrator | ✅ Full | Creates phases, launches subagents, monitors, completes phases |
 | Subagent | ✅ Full | Manages own task lifecycle + logs progress |
 
 ## Quick Reference
 
 | Caller | Responsibility |
 |--------|----------------|
-| Orchestrator | start_workflow, launch subagents, monitor, complete_workflow |
+| Orchestrator | start_workflow → start_phase → launch subagents → monitor → complete_phase → complete_workflow |
 | Sub-agent | start_task → work → log_* → complete_task |
 
 ## Orchestrator Protocol
@@ -31,17 +31,19 @@ Read .claude/workflows/<name>/workflow.md    → phases, agents
 start_workflow({name, objective, profile, total_phases}) → workflow_id
 ```
 
-### 3. Phase Loop (Direct Pattern)
+### 3. Phase Loop
 ```
 FOR each phase:
-  1. Launch sub-agent via Task tool (pass workflow_id in prompt)
-  2. Subagent manages own MCP calls:
-     - start_task() → task_id
+  1. start_phase({workflow_id, number, name, is_parallel}) → phase_id
+  2. Launch sub-agents via Task tool (pass workflow_id + phase_id in prompt)
+  3. Subagent manages own MCP calls:
+     - start_task({workflow_id, phase_id, ...}) → task_id
      - [does work]
      - log_milestone(), log_decision(), log_issue()
      - complete_task()
-  3. Monitor via get_context({include: ["tasks", "blockers"]})
-  4. IF blockers → STOP, request human help
+  4. Monitor via get_context({include: ["tasks", "blockers"]})
+  5. IF blockers → STOP, request human help
+  6. complete_phase({phase_id, status})
 ```
 
 ### 4. Completion
@@ -59,8 +61,8 @@ Subagents have **full MCP access** and manage their own task lifecycle.
 ### Subagent MCP Flow
 
 ```
-1. Receive workflow_id from orchestrator (in prompt)
-2. start_task({workflow_id, name, goal, caller_type: "subagent", agent_name}) → task_id
+1. Receive workflow_id + phase_id from orchestrator (in prompt)
+2. start_task({workflow_id, phase_id, caller_type: "subagent", agent_name, name, goal}) → task_id
 3. Do work (Read, Write, Edit, Bash, etc.)
 4. Log progress in real-time:
    - log_milestone({task_id, message, progress})
@@ -76,7 +78,8 @@ Subagents have **full MCP access** and manage their own task lifecycle.
 
 **Workflow**: {workflow_name}
 **Workflow ID**: `{workflow_id}`
-**Phase**: {phase_number}
+**Phase ID**: `{phase_id}`
+**Phase**: {phase_number} - {phase_name}
 
 ## Your Goal
 {task_goal}
@@ -97,10 +100,11 @@ You have full access to MCP tools. Follow this protocol:
    ```
    start_task({
      workflow_id: "{workflow_id}",
-     name: "{task_name}",
-     goal: "{task_goal}",
+     phase_id: "{phase_id}",
      caller_type: "subagent",
      agent_name: "{agent_name}",
+     name: "{task_name}",
+     goal: "{task_goal}",
      areas: ["{scope_paths}"]
    })
    ```
@@ -129,18 +133,40 @@ You have full access to MCP tools. Follow this protocol:
 
 ## MCP Tool Schemas
 
+### start_phase (Orchestrator only)
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `workflow_id` | string | yes | Workflow identifier |
+| `number` | number | yes | Phase number (1, 2, 3...) |
+| `name` | string | yes | Phase name |
+| `is_parallel` | boolean | no | Can tasks run in parallel? |
+
+**Returns**: `{ phase_id, number, name, status, started_at }`
+
+### complete_phase (Orchestrator only)
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `phase_id` | string | yes | Phase identifier |
+| `status` | enum | yes | `completed` or `failed` |
+| `summary` | string | no | Phase outcome summary |
+
+**Returns**: `{ phase_id, status, duration_ms, tasks: {...} }`
+
 ### start_task
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `workflow_id` | string | yes | Workflow identifier |
+| `phase_id` | string | yes | Phase identifier (from start_phase) |
 | `caller_type` | string | yes | `orchestrator` or `subagent` |
-| `agent_name` | string | no | Agent identifier (for tracking) |
+| `agent_name` | string | conditional | Required when caller_type is `subagent` |
 | `name` | string | yes | Task name |
 | `goal` | string | yes | Task goal |
 | `areas` | string[] | no | Code paths affected |
 
-**Returns**: `{ task_id, started_at }`
+**Returns**: `{ task_id, phase_id, phase_number, phase_name, started_at }`
 
 ### complete_task
 
@@ -160,7 +186,8 @@ You have full access to MCP tools. Follow this protocol:
 | Field | Type | Required |
 |-------|------|----------|
 | `workflow_id` | string | yes |
-| `include` | string[] | yes | `decisions`, `milestones`, `blockers`, `tasks` |
+| `include` | string[] | yes | `decisions`, `milestones`, `blockers`, `tasks`, `phase_summary` |
+| `filter.phase` | number | no |
 | `filter.agent` | string | no |
 
 ### log_decision
@@ -218,10 +245,11 @@ Then: Retry, Skip (if non-critical), or Abort workflow.
 
 ## MCP Call Budgets
 
-| Complexity | Subagent Calls | Pattern |
-|------------|----------------|---------|
-| Simple | 2-3 | start + complete |
-| Standard | 4-6 | + get_context, 1-2 logs |
-| Complex | 6-10 | + multiple logs per decision/issue |
+| Role | Calls per Phase | Pattern |
+|------|-----------------|---------|
+| Orchestrator | 2-3 | start_phase + monitor + complete_phase |
+| Subagent (simple) | 2-3 | start_task + complete_task |
+| Subagent (standard) | 4-6 | + 1-2 milestones, 1 decision |
+| Subagent (complex) | 6-10 | + multiple logs |
 
 **Note**: Both orchestrator and subagents have full MCP access.

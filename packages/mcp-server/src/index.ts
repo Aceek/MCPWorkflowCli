@@ -42,6 +42,9 @@ import {
   handleCompleteWorkflow,
 } from './tools/complete-workflow.js'
 import { getContextTool, handleGetContext } from './tools/get-context.js'
+// Phase tools
+import { startPhaseTool, handleStartPhase } from './tools/start-phase.js'
+import { completePhaseTool, handleCompletePhase } from './tools/complete-phase.js'
 
 // Import error types
 import { McpError, ValidationError, NotFoundError } from './utils/errors.js'
@@ -87,6 +90,9 @@ function createServer(): Server {
       startWorkflowTool,
       completeWorkflowTool,
       getContextTool,
+      // Phase tools
+      startPhaseTool,
+      completePhaseTool,
       // Task tools
       startTaskTool,
       completeTaskTool,
@@ -128,6 +134,13 @@ async function handleToolCall(
 
     case 'get_context':
       return handleGetContext(args)
+
+    // Phase tools
+    case 'start_phase':
+      return handleStartPhase(args)
+
+    case 'complete_phase':
+      return handleCompletePhase(args)
 
     // Task tools
     case 'start_task':
