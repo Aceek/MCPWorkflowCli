@@ -9,9 +9,29 @@ interface WorkflowPageProps {
 }
 
 async function getWorkflow(id: string) {
-  return prisma.workflow.findUnique({
+  const workflow = await prisma.workflow.findUnique({
     where: { id },
     include: {
+      phases: {
+        include: {
+          tasks: {
+            include: {
+              _count: {
+                select: {
+                  decisions: true,
+                  issues: true,
+                  milestones: true,
+                },
+              },
+            },
+            orderBy: { startedAt: 'asc' },
+          },
+          _count: {
+            select: { tasks: true },
+          },
+        },
+        orderBy: { number: 'asc' },
+      },
       tasks: {
         include: {
           decisions: {
@@ -35,6 +55,31 @@ async function getWorkflow(id: string) {
       },
     },
   })
+
+  if (!workflow) return null
+
+  // Calculate phase stats
+  const phasesWithStats = workflow.phases.map((phase) => {
+    const completedTasks = phase.tasks.filter(
+      (t) => t.status === 'SUCCESS' || t.status === 'COMPLETED'
+    ).length
+    const totalDuration = phase.tasks.reduce(
+      (acc, t) => acc + (t.durationMs ?? 0),
+      0
+    )
+
+    return {
+      ...phase,
+      tasksCount: phase.tasks.length,
+      completedTasksCount: completedTasks,
+      totalDurationMs: totalDuration,
+    }
+  })
+
+  return {
+    ...workflow,
+    phases: phasesWithStats,
+  }
 }
 
 export default async function WorkflowPage({ params }: WorkflowPageProps) {

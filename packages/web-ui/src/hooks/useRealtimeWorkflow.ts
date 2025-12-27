@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import type { Workflow, Task, Decision, Issue, Milestone } from '@prisma/client'
+import type { Workflow, Task, Decision, Issue, Milestone, Phase } from '@prisma/client'
 import { useWebSocket, EVENTS } from './useWebSocket'
+import type { PhaseWithStats } from '@/lib/api'
 
 type TaskWithRelations = Task & {
   decisions: Decision[]
@@ -13,6 +14,7 @@ type TaskWithRelations = Task & {
 
 type WorkflowWithTasks = Workflow & {
   tasks: TaskWithRelations[]
+  phases?: PhaseWithStats[]
 }
 
 interface TaskCreatedEvent {
@@ -45,6 +47,16 @@ interface MilestoneCreatedEvent {
 
 interface WorkflowUpdatedEvent {
   workflow: Workflow
+}
+
+interface PhaseCreatedEvent {
+  phase: Phase
+  workflowId: string
+}
+
+interface PhaseUpdatedEvent {
+  phase: Phase
+  workflowId: string
 }
 
 interface UseRealtimeWorkflowOptions {
@@ -197,6 +209,51 @@ export function useRealtimeWorkflow(options: UseRealtimeWorkflowOptions) {
       setLastUpdate(new Date())
     }
 
+    // Phase created
+    const handlePhaseCreated = (event: PhaseCreatedEvent) => {
+      if (event.workflowId !== workflowId) return
+
+      setWorkflow((prev) => {
+        if (!prev) return prev
+        // Check if phase already exists
+        if (prev.phases?.some((p) => p.id === event.phase.id)) {
+          return prev
+        }
+        // Add new phase with default stats
+        const newPhase: PhaseWithStats = {
+          ...event.phase,
+          _count: { tasks: 0 },
+          tasksCount: 0,
+          completedTasksCount: 0,
+          totalDurationMs: 0,
+          tasks: [],
+        }
+        return {
+          ...prev,
+          phases: [...(prev.phases || []), newPhase],
+        }
+      })
+      setLastUpdate(new Date())
+    }
+
+    // Phase updated
+    const handlePhaseUpdated = (event: PhaseUpdatedEvent) => {
+      if (event.workflowId !== workflowId) return
+
+      setWorkflow((prev) => {
+        if (!prev || !prev.phases) return prev
+        return {
+          ...prev,
+          phases: prev.phases.map((phase) =>
+            phase.id === event.phase.id
+              ? { ...phase, ...event.phase }
+              : phase
+          ),
+        }
+      })
+      setLastUpdate(new Date())
+    }
+
     // Subscribe to events
     on(EVENTS.TASK_CREATED, handleTaskCreated)
     on(EVENTS.TASK_UPDATED, handleTaskUpdated)
@@ -204,6 +261,8 @@ export function useRealtimeWorkflow(options: UseRealtimeWorkflowOptions) {
     on(EVENTS.ISSUE_CREATED, handleIssueCreated)
     on(EVENTS.MILESTONE_CREATED, handleMilestoneCreated)
     on(EVENTS.WORKFLOW_UPDATED, handleWorkflowUpdated)
+    on(EVENTS.PHASE_CREATED, handlePhaseCreated)
+    on(EVENTS.PHASE_UPDATED, handlePhaseUpdated)
 
     return () => {
       off(EVENTS.TASK_CREATED, handleTaskCreated)
@@ -212,6 +271,8 @@ export function useRealtimeWorkflow(options: UseRealtimeWorkflowOptions) {
       off(EVENTS.ISSUE_CREATED, handleIssueCreated)
       off(EVENTS.MILESTONE_CREATED, handleMilestoneCreated)
       off(EVENTS.WORKFLOW_UPDATED, handleWorkflowUpdated)
+      off(EVENTS.PHASE_CREATED, handlePhaseCreated)
+      off(EVENTS.PHASE_UPDATED, handlePhaseUpdated)
     }
   }, [isConnected, workflowId, on, off])
 

@@ -3,10 +3,11 @@
 import Link from 'next/link'
 import type { Workflow, Task, Decision, Issue, Milestone } from '@prisma/client'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Wifi, WifiOff, ClipboardList, Calendar, ListTodo, Clock, Zap } from 'lucide-react'
+import { ArrowLeft, Wifi, WifiOff, ClipboardList, Calendar, ListTodo, Clock, Zap, Layers } from 'lucide-react'
 import { useRealtimeWorkflow } from '@/hooks/useRealtimeWorkflow'
 import { StatusBadge } from '../shared/StatusBadge'
 import { TaskTree } from '../task/TaskTree'
+import { PhaseTimeline } from './PhaseTimeline'
 import { Card } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { EmptyState } from '@/components/ui/empty-state'
@@ -17,6 +18,7 @@ import { parseJsonArraySafe } from '@/lib/json-parse'
 import { WorkflowPlanSchema } from '@/lib/json-schemas'
 import { formatDate, formatDuration } from '@/lib/date-utils'
 import { formatTokens } from '@/lib/format-utils'
+import type { PhaseWithStats } from '@/lib/api'
 
 type TaskWithRelations = Task & {
   decisions: Decision[]
@@ -27,6 +29,7 @@ type TaskWithRelations = Task & {
 
 type WorkflowWithTasks = Workflow & {
   tasks: TaskWithRelations[]
+  phases?: PhaseWithStats[]
 }
 
 interface RealtimeWorkflowDetailProps {
@@ -47,6 +50,15 @@ export function RealtimeWorkflowDetail({
 
   // Separate root tasks (no parent) from subtasks
   const rootTasks = workflow.tasks.filter((task) => !task.parentTaskId)
+
+  // Separate orphan tasks (tasks without phaseId) from phase tasks
+  const orphanTasks = rootTasks.filter((task) => !task.phaseId)
+  const hasPhases = workflow.phases && workflow.phases.length > 0
+
+  // Calculate current active phase
+  const currentPhase = workflow.phases?.find(
+    (p) => p.status === 'IN_PROGRESS'
+  )?.number ?? workflow.phases?.length ?? 1
 
   return (
     <motion.div
@@ -162,54 +174,72 @@ export function RealtimeWorkflowDetail({
         })()}
       </AnimatePresence>
 
-      {/* Tasks */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-      >
-        <h2 className="mb-4 text-xl font-semibold text-[hsl(var(--foreground))]">
-          Tasks
-        </h2>
+      {/* Phases */}
+      {hasPhases && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          <div className="flex items-center gap-2 mb-4">
+            <Layers className="h-5 w-5 text-[hsl(var(--muted-foreground))]" />
+            <h2 className="text-xl font-semibold text-[hsl(var(--foreground))]">
+              Phases
+            </h2>
+            <span className="text-sm text-[hsl(var(--muted-foreground))]">
+              ({workflow.phases!.length})
+            </span>
+          </div>
 
-        <AnimatePresence mode="wait">
-          {rootTasks.length === 0 ? (
-            <motion.div
-              key="empty"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-            >
-              <EmptyState
-                icon={<ClipboardList className="h-8 w-8" />}
-                title="No tasks yet"
-                description={
-                  isConnected
-                    ? 'Tasks will appear here in real-time as they are created.'
-                    : 'Connect to see real-time updates.'
-                }
+          <PhaseTimeline
+            phases={workflow.phases!}
+            currentPhase={currentPhase}
+          />
+        </motion.div>
+      )}
+
+      {/* Orphan Tasks (tasks without phase) */}
+      {orphanTasks.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: hasPhases ? 0.4 : 0.3 }}
+        >
+          <h2 className="mb-4 text-xl font-semibold text-[hsl(var(--foreground))]">
+            {hasPhases ? 'Unassigned Tasks' : 'Tasks'}
+          </h2>
+
+          <div className="space-y-4">
+            {orphanTasks.map((task) => (
+              <TaskTree
+                key={task.id}
+                task={task}
+                allTasks={workflow.tasks}
+                formatDuration={formatDuration}
               />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="tasks"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="space-y-4"
-            >
-              {rootTasks.map((task) => (
-                <TaskTree
-                  key={task.id}
-                  task={task}
-                  allTasks={workflow.tasks}
-                  formatDuration={formatDuration}
-                />
-              ))}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Empty state when no phases and no tasks */}
+      {!hasPhases && orphanTasks.length === 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+        >
+          <EmptyState
+            icon={<ClipboardList className="h-8 w-8" />}
+            title="No tasks yet"
+            description={
+              isConnected
+                ? 'Tasks will appear here in real-time as they are created.'
+                : 'Connect to see real-time updates.'
+            }
+          />
+        </motion.div>
+      )}
     </motion.div>
   )
 }
