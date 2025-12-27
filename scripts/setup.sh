@@ -1,5 +1,5 @@
 #!/bin/bash
-# Mission Control - Setup Script
+# Workflow Control - Setup Script
 # One-command installation and verification
 
 set -e
@@ -60,7 +60,7 @@ done
 print_header() {
   echo ""
   echo -e "${CYAN}╔══════════════════════════════════════════════════╗${NC}"
-  echo -e "${CYAN}║${NC}        ${BLUE}Mission Control - Setup${NC}                   ${CYAN}║${NC}"
+  echo -e "${CYAN}║${NC}        ${BLUE}Workflow Control - Setup${NC}                  ${CYAN}║${NC}"
   echo -e "${CYAN}║${NC}  Orchestration + Observability for AI Agents     ${CYAN}║${NC}"
   echo -e "${CYAN}╚══════════════════════════════════════════════════╝${NC}"
   echo ""
@@ -260,15 +260,15 @@ print_next_steps() {
   echo "  2. Verify MCP connection:"
   echo -e "     ${CYAN}/mcp${NC} (should show mission-control: connected)"
   echo ""
-  echo "  3. Test with a mission:"
-  echo -e "     ${CYAN}\"Create a mission for [your objective]\"${NC}"
+  echo "  3. Test with a workflow:"
+  echo -e "     ${CYAN}\"Design a workflow for [your objective]\"${NC}"
   echo ""
   echo "  4. Start the web UI (optional):"
   echo -e "     ${CYAN}pnpm dev:ui${NC}"
   echo ""
   echo -e "${BLUE}Documentation:${NC}"
-  echo "  - Mission System: ~/.claude/docs/mission-system/"
-  echo "  - Project Docs:   $PROJECT_DIR/.claude/docs/"
+  echo "  - Workflow System: ~/.claude/docs/workflow-system/"
+  echo "  - Project Docs:    $PROJECT_DIR/.claude/docs/"
   echo ""
 }
 

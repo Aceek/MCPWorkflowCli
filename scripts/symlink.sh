@@ -1,5 +1,5 @@
 #!/bin/bash
-# Mission Control - Symlink Script
+# Workflow Control - Symlink Script
 # Creates symlinks in ~/.claude/ for global agent access
 
 set -e
@@ -21,8 +21,8 @@ CLAUDE_DOCS_DIR="$CLAUDE_DIR/docs"
 CLAUDE_AGENTS_DIR="$CLAUDE_DIR/agents"
 
 # Source paths
-MISSION_DOCS_SRC="$PROJECT_DIR/mission-system/docs"
-MISSION_AGENT_SRC="$PROJECT_DIR/mission-system/agents/mission-architect.md"
+WORKFLOW_DOCS_SRC="$PROJECT_DIR/mission-system/docs"
+WORKFLOW_AGENT_SRC="$PROJECT_DIR/mission-system/agents/workflow-architect.md"
 
 # Flags
 FORCE=false
@@ -40,7 +40,7 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     -h|--help)
-      echo "Mission Control - Symlink Script"
+      echo "Workflow Control - Symlink Script"
       echo ""
       echo "Usage: ./symlink.sh [OPTIONS]"
       echo ""
@@ -50,8 +50,8 @@ while [[ $# -gt 0 ]]; do
       echo "  -h, --help     Show this help message"
       echo ""
       echo "Creates symlinks:"
-      echo "  ~/.claude/docs/mission-system/ -> mission-system/docs/"
-      echo "  ~/.claude/agents/mission-architect.md -> mission-system/agents/mission-architect.md"
+      echo "  ~/.claude/docs/workflow-system/ -> mission-system/docs/"
+      echo "  ~/.claude/agents/workflow-architect.md -> mission-system/agents/workflow-architect.md"
       echo ""
       exit 0
       ;;
@@ -145,15 +145,18 @@ remove_symlink() {
 # Main execution
 main() {
   echo ""
-  echo -e "${BLUE}Mission Control - Symlink Setup${NC}"
-  echo "================================"
+  echo -e "${BLUE}Workflow Control - Symlink Setup${NC}"
+  echo "================================="
   echo ""
 
   if [ "$REMOVE" = true ]; then
     echo "Removing symlinks..."
     echo ""
-    remove_symlink "$CLAUDE_DOCS_DIR/mission-system" "Mission System docs"
-    remove_symlink "$CLAUDE_AGENTS_DIR/mission-architect.md" "Mission Architect agent"
+    remove_symlink "$CLAUDE_DOCS_DIR/workflow-system" "Workflow System docs"
+    remove_symlink "$CLAUDE_AGENTS_DIR/workflow-architect.md" "Workflow Architect agent"
+    # Also remove legacy symlinks if they exist
+    remove_symlink "$CLAUDE_DOCS_DIR/mission-system" "Legacy Mission System docs"
+    remove_symlink "$CLAUDE_AGENTS_DIR/mission-architect.md" "Legacy Mission Architect agent"
     echo ""
     print_success "Symlinks removed"
     exit 0
@@ -165,12 +168,22 @@ main() {
     mkdir -p "$CLAUDE_DIR"
   fi
 
+  # Remove legacy symlinks if they exist
+  if [ -L "$CLAUDE_DOCS_DIR/mission-system" ]; then
+    rm "$CLAUDE_DOCS_DIR/mission-system"
+    print_info "Removed legacy mission-system symlink"
+  fi
+  if [ -L "$CLAUDE_AGENTS_DIR/mission-architect.md" ]; then
+    rm "$CLAUDE_AGENTS_DIR/mission-architect.md"
+    print_info "Removed legacy mission-architect.md symlink"
+  fi
+
   # Create docs symlink
   echo "Creating symlinks..."
   echo ""
 
-  create_symlink "$MISSION_DOCS_SRC" "$CLAUDE_DOCS_DIR/mission-system" "Mission System docs"
-  create_symlink "$MISSION_AGENT_SRC" "$CLAUDE_AGENTS_DIR/mission-architect.md" "Mission Architect agent"
+  create_symlink "$WORKFLOW_DOCS_SRC" "$CLAUDE_DOCS_DIR/workflow-system" "Workflow System docs"
+  create_symlink "$WORKFLOW_AGENT_SRC" "$CLAUDE_AGENTS_DIR/workflow-architect.md" "Workflow Architect agent"
 
   echo ""
 
@@ -178,14 +191,14 @@ main() {
   echo "Verifying symlinks..."
   local all_good=true
 
-  if [ -L "$CLAUDE_DOCS_DIR/mission-system" ]; then
+  if [ -L "$CLAUDE_DOCS_DIR/workflow-system" ]; then
     print_success "Docs symlink verified"
   else
     print_error "Docs symlink missing or invalid"
     all_good=false
   fi
 
-  if [ -L "$CLAUDE_AGENTS_DIR/mission-architect.md" ]; then
+  if [ -L "$CLAUDE_AGENTS_DIR/workflow-architect.md" ]; then
     print_success "Agent symlink verified"
   else
     print_error "Agent symlink missing or invalid"
@@ -198,8 +211,8 @@ main() {
     echo -e "${GREEN}All symlinks created successfully!${NC}"
     echo ""
     echo "You can now use:"
-    echo "  - Mission System docs in any Claude Code session"
-    echo "  - mission-architect agent via Task tool"
+    echo "  - Workflow System docs in any Claude Code session"
+    echo "  - workflow-architect agent via Task tool"
     echo ""
   else
     echo -e "${YELLOW}Some symlinks could not be created.${NC}"
