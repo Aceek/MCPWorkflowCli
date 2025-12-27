@@ -1,7 +1,7 @@
 # Agent Template
 
 <instructions>
-For mission-specific agents in /project/.claude/missions/<name>/agents/
+For workflow-specific agents in /project/.claude/workflows/<name>/agents/
 Delete this block after filling.
 </instructions>
 
@@ -18,13 +18,13 @@ model: sonnet  # sonnet|opus|haiku
 # Role
 <One sentence: what you are and your expertise>
 
-# Mission Context
-Read: `.claude/missions/<name>/mission.md`
-Mission ID: `<mission_id>`
+# Workflow Context
+Read: `.claude/workflows/<name>/workflow.md`
+Workflow ID: `<workflow_id>`
 Phase: <phase_number>
 
 # Your Task
-<Specific task for this agent within the mission>
+<Specific task for this agent within the workflow>
 
 ## Inputs
 - <What to read/analyze>
@@ -41,7 +41,7 @@ Phase: <phase_number>
 ## At Start
 ```
 start_task({
-  mission_id: "<mission_id>",
+  workflow_id: "<workflow_id>",
   phase: <phase_number>,
   caller_type: "subagent",
   agent_name: "<agent-name>",
@@ -60,7 +60,7 @@ Store the returned `task_id`.
 ## Read Previous Context (if needed)
 ```
 get_context({
-  mission_id: "<mission_id>",
+  workflow_id: "<workflow_id>",
   include: ["decisions"],
   filter: { phase: <previous_phase> }
 })
