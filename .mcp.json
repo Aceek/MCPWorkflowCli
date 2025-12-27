@@ -1,9 +1,8 @@
 {
   "mcpServers": {
-    "workflow-tracker": {
-      "type": "stdio",
-      "command": "npx",
-      "args": ["tsx", "packages/mcp-server/src/index.ts"],
+    "mission-control": {
+      "command": "node",
+      "args": ["/home/ilan/code/mcpAgentTracker/packages/mcp-server/dist/index.js"],
       "env": {
         "DATABASE_URL": "file:/home/ilan/code/mcpAgentTracker/packages/shared/prisma/mcp-tracker.db"
       }
