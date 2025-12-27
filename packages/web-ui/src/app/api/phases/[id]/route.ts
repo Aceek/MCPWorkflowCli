@@ -17,7 +17,7 @@ export async function GET(request: Request, { params }: RouteParams) {
     const phase = await prisma.phase.findUnique({
       where: { id },
       include: {
-        mission: {
+        workflow: {
           select: {
             id: true,
             name: true,

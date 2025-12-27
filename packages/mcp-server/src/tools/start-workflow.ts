@@ -1,8 +1,7 @@
 /**
  * start_workflow MCP Tool
  *
- * Initialize a new workflow tracking session.
- * Unified tool that supports both simple workflows and mission-based orchestration.
+ * Initialize a new workflow tracking session with optional multi-phase orchestration.
  */
 
 import { z } from 'zod'
@@ -17,7 +16,7 @@ const startWorkflowSchema = z.object({
   description: z.string().optional(),
   // Legacy field
   plan: z.string().optional(),
-  // Mission fields (optional for backward compatibility)
+  // Extended workflow fields
   objective: z.string().optional(),
   profile: z.enum(['simple', 'standard', 'complex']).optional().default('standard'),
   total_phases: z.number().int().min(1).max(20).optional(),
@@ -83,7 +82,7 @@ export async function handleStartWorkflow(
   // Determine default phases based on profile if not specified
   let totalPhases = validated.total_phases
   if (!totalPhases && validated.objective) {
-    // Only set default phases if this is mission-style (has objective)
+    // Set default phases based on profile when objective is provided
     switch (profile) {
       case WorkflowProfile.SIMPLE:
         totalPhases = 2
@@ -105,8 +104,11 @@ export async function handleStartWorkflow(
       name: validated.name,
       description: validated.description,
       plan: validated.plan,
-      // Mission fields stored in JSON plan or description for now
-      // until schema is updated with unified fields
+      objective: validated.objective,
+      scope: validated.scope,
+      constraints: validated.constraints,
+      profile: profile,
+      totalPhases: totalPhases ?? 1,
       status: WorkflowStatus.IN_PROGRESS,
     },
   })
@@ -120,7 +122,7 @@ export async function handleStartWorkflow(
     created_at: workflow.createdAt.toISOString(),
   }
 
-  // Include mission-style fields if provided
+  // Include extended fields if provided
   if (validated.objective) {
     response.objective = validated.objective
     response.profile = profile

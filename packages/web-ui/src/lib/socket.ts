@@ -24,9 +24,7 @@ export const EVENTS = {
   ISSUE_CREATED: 'issue:created',
   // Milestone events
   MILESTONE_CREATED: 'milestone:created',
-  // Mission system events
-  MISSION_CREATED: 'mission:created',
-  MISSION_UPDATED: 'mission:updated',
+  // Phase events
   PHASE_CREATED: 'phase:created',
   PHASE_UPDATED: 'phase:updated',
   // Stats update (for dashboard)

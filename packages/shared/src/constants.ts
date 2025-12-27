@@ -59,18 +59,18 @@ export const ISSUE_TYPES = [
 export const TESTS_STATUSES = ['PASSED', 'FAILED', 'NOT_RUN'] as const
 
 // ============================================
-// MISSION SYSTEM ENUM VALUE ARRAYS
+// WORKFLOW EXTENDED ENUM VALUE ARRAYS
 // ============================================
 
 /**
- * All possible mission profile values
+ * All possible workflow profile values
  */
-export const MISSION_PROFILES = ['SIMPLE', 'STANDARD', 'COMPLEX'] as const
+export const WORKFLOW_PROFILES = ['SIMPLE', 'STANDARD', 'COMPLEX'] as const
 
 /**
- * All possible mission status values
+ * All possible workflow status values (full set including PENDING/BLOCKED)
  */
-export const MISSION_STATUSES = [
+export const WORKFLOW_STATUSES_FULL = [
   'PENDING',
   'IN_PROGRESS',
   'COMPLETED',
@@ -148,22 +148,22 @@ export const TESTS_STATUS_LABELS: Record<string, string> = {
 }
 
 // ============================================
-// MISSION SYSTEM DISPLAY LABELS
+// WORKFLOW EXTENDED DISPLAY LABELS
 // ============================================
 
 /**
- * Human-readable labels for mission profiles
+ * Human-readable labels for workflow profiles
  */
-export const MISSION_PROFILE_LABELS: Record<string, string> = {
+export const WORKFLOW_PROFILE_LABELS: Record<string, string> = {
   SIMPLE: 'Simple',
   STANDARD: 'Standard',
   COMPLEX: 'Complex',
 }
 
 /**
- * Human-readable labels for mission statuses
+ * Human-readable labels for workflow statuses (full set)
  */
-export const MISSION_STATUS_LABELS: Record<string, string> = {
+export const WORKFLOW_STATUS_LABELS_FULL: Record<string, string> = {
   PENDING: 'Pending',
   IN_PROGRESS: 'In Progress',
   COMPLETED: 'Completed',
@@ -222,22 +222,22 @@ export const TESTS_STATUS_COLORS: Record<string, string> = {
 }
 
 // ============================================
-// MISSION SYSTEM STATUS COLORS
+// WORKFLOW EXTENDED STATUS COLORS
 // ============================================
 
 /**
- * Tailwind CSS color classes for mission profiles
+ * Tailwind CSS color classes for workflow profiles
  */
-export const MISSION_PROFILE_COLORS: Record<string, string> = {
+export const WORKFLOW_PROFILE_COLORS: Record<string, string> = {
   SIMPLE: 'bg-gray-500 text-white',
   STANDARD: 'bg-blue-500 text-white',
   COMPLEX: 'bg-purple-500 text-white',
 }
 
 /**
- * Tailwind CSS color classes for mission statuses
+ * Tailwind CSS color classes for workflow statuses (full set)
  */
-export const MISSION_STATUS_COLORS: Record<string, string> = {
+export const WORKFLOW_STATUS_COLORS_FULL: Record<string, string> = {
   PENDING: 'bg-gray-500 text-white',
   IN_PROGRESS: 'bg-blue-500 text-white',
   COMPLETED: 'bg-green-500 text-white',
@@ -270,7 +270,7 @@ export const CALLER_TYPE_COLORS: Record<string, string> = {
 /**
  * MCP Server metadata
  */
-export const MCP_SERVER_NAME = 'mission-control'
+export const MCP_SERVER_NAME = 'workflow-control'
 export const MCP_SERVER_VERSION = '0.1.0'
 
 /**
