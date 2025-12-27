@@ -53,6 +53,9 @@ import { McpError, ValidationError, NotFoundError } from './utils/errors.js'
 // Import WebSocket server
 import { getWebSocketServer } from './websocket/index.js'
 
+// Import database health check
+import { ensureDatabaseReady } from './db.js'
+
 // Import server registry
 import {
   registerServerPort,
@@ -212,6 +215,9 @@ function formatError(error: unknown): CallToolResult {
  * Main entry point
  */
 async function main(): Promise<void> {
+  // Verify database is ready before starting
+  await ensureDatabaseReady()
+
   const server = createServer()
   const transport = new StdioServerTransport()
 

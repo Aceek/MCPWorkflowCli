@@ -106,24 +106,44 @@ check_binary() {
 check_database() {
   print_info "Checking database..."
 
-  local db_path="$PROJECT_DIR/packages/shared/prisma/dev.db"
+  local db_path="$PROJECT_DIR/packages/shared/prisma/mcp-tracker.db"
 
   if [ ! -f "$db_path" ]; then
-    print_warning "Database file not found (will be created on first run)"
-    print_verbose "Expected: $db_path"
-    return 0
+    print_error "Database file not found: $db_path"
+    print_info "Fix: pnpm db:migrate"
+    return 1
   fi
 
   print_success "Database file exists"
   print_verbose "Path: $db_path"
 
-  # Check if we can query it
+  # Check if we can query it and tables exist
   if command -v sqlite3 &> /dev/null; then
     if sqlite3 "$db_path" "SELECT 1" &> /dev/null; then
       print_success "Database is accessible"
+
+      # Check critical tables
+      local tables_ok=true
+      for table in Mission Workflow Task; do
+        if sqlite3 "$db_path" "SELECT 1 FROM $table LIMIT 1" &> /dev/null; then
+          print_verbose "Table $table exists"
+        else
+          print_error "Table $table missing"
+          tables_ok=false
+        fi
+      done
+
+      if [ "$tables_ok" = false ]; then
+        print_info "Fix: pnpm db:migrate"
+        return 1
+      fi
+      print_success "Required tables exist"
     else
-      print_warning "Database exists but cannot be queried"
+      print_error "Database file corrupted or inaccessible"
+      return 1
     fi
+  else
+    print_warning "sqlite3 not installed, skipping table check"
   fi
 
   return 0
@@ -147,9 +167,11 @@ EOF
   # Start server and send request with timeout
   local start_time=$(date +%s)
 
+  local db_path="$PROJECT_DIR/packages/shared/prisma/mcp-tracker.db"
+
   # Use timeout command if available
   if command -v timeout &> /dev/null; then
-    if timeout "$TIMEOUT" bash -c "cat '$request_file' | node '$MCP_SERVER_PATH' 2>/dev/null | head -1" > "$response_file" 2>&1; then
+    if timeout "$TIMEOUT" bash -c "cat '$request_file' | DATABASE_URL='file:$db_path' node '$MCP_SERVER_PATH' 2>/dev/null | head -1" > "$response_file" 2>&1; then
       local response=$(cat "$response_file")
 
       if [ -n "$response" ]; then
@@ -208,6 +230,7 @@ list_tools() {
   # Create request for tools/list
   local request_file=$(mktemp)
   local response_file=$(mktemp)
+  local db_path="$PROJECT_DIR/packages/shared/prisma/mcp-tracker.db"
 
   # Initialize + list tools request
   cat > "$request_file" << 'EOF'
@@ -216,7 +239,7 @@ list_tools() {
 EOF
 
   if command -v timeout &> /dev/null; then
-    local response=$(timeout "$TIMEOUT" bash -c "cat '$request_file' | node '$MCP_SERVER_PATH' 2>/dev/null" 2>&1 | tail -1)
+    local response=$(timeout "$TIMEOUT" bash -c "cat '$request_file' | DATABASE_URL='file:$db_path' node '$MCP_SERVER_PATH' 2>/dev/null" 2>&1 | tail -1)
 
     if [ -n "$response" ] && echo "$response" | grep -q '"tools"'; then
       local tool_count=$(echo "$response" | node -e "

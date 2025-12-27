@@ -225,6 +225,20 @@ generate_mcp_config() {
   echo ""
 }
 
+# Run final verification
+run_verification() {
+  print_step "Running setup verification..."
+  echo ""
+
+  if "$SCRIPT_DIR/verify-setup.sh"; then
+    print_success "All verifications passed"
+  else
+    print_warning "Some verifications failed - check output above"
+    print_info "Run: ./scripts/verify-setup.sh --fix to attempt auto-fix"
+  fi
+  echo ""
+}
+
 # Print next steps
 print_next_steps() {
   echo -e "${GREEN}╔══════════════════════════════════════════════════╗${NC}"
@@ -293,6 +307,7 @@ main() {
   build_project
   create_symlinks
   generate_mcp_config
+  run_verification
   print_next_steps
 }
 
