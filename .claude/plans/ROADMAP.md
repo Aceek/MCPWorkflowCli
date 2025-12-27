@@ -4,8 +4,8 @@
 
 | Phase | Name | Goal | Status |
 |-------|------|------|--------|
-| 1 | **Merge & Reorganize** | Single repo with proper structure | `in_progress` |
-| 2 | **Schema Extension** | Add Mission, Phase, CallerType to DB | `pending` |
+| 1 | **Merge & Reorganize** | Single repo with proper structure | `completed` |
+| 2 | **Schema Extension** | Add Mission, Phase, CallerType to DB | `completed` |
 | 3 | **MCP Tools Extension** | 8 simplified tools + phase auto-management | `pending` |
 | 4 | **Agent Adaptation** | Update agent prompts for MCP | `pending` |
 | 5 | **WebUI Adaptation** | Mission/Phase hierarchy views | `pending` |
@@ -54,54 +54,54 @@
 
 ---
 
-## Phase 2: Schema Extension
+## Phase 2: Schema Extension ✅
 
 **Goal**: Database supports missions, phases, and caller context
 
 ### 2.1 New Enums
-- [ ] Add `MissionProfile` enum (SIMPLE, STANDARD, COMPLEX)
-- [ ] Add `MissionStatus` enum (PENDING, IN_PROGRESS, COMPLETED, FAILED, BLOCKED)
-- [ ] Add `PhaseStatus` enum (PENDING, IN_PROGRESS, COMPLETED, FAILED)
-- [ ] Add `CallerType` enum (ORCHESTRATOR, SUBAGENT)
+- [x] Add `MissionProfile` enum (SIMPLE, STANDARD, COMPLEX)
+- [x] Add `MissionStatus` enum (PENDING, IN_PROGRESS, COMPLETED, FAILED, BLOCKED)
+- [x] Add `PhaseStatus` enum (PENDING, IN_PROGRESS, COMPLETED, FAILED)
+- [x] Add `CallerType` enum (ORCHESTRATOR, SUBAGENT)
 
 ### 2.2 Mission Model
-- [ ] Create `Mission` model in `schema.prisma`
-  - [ ] id, name, description
-  - [ ] objective, scope, constraints
-  - [ ] profile (MissionProfile)
-  - [ ] status (MissionStatus)
-  - [ ] currentPhase, totalPhases
-  - [ ] missionPath
-  - [ ] timestamps (createdAt, updatedAt, completedAt)
-  - [ ] relation to Phase[]
+- [x] Create `Mission` model in `schema.prisma`
+  - [x] id, name, description
+  - [x] objective, scope, constraints
+  - [x] profile (MissionProfile)
+  - [x] status (MissionStatus)
+  - [x] currentPhase, totalPhases
+  - [x] missionPath
+  - [x] timestamps (createdAt, updatedAt, completedAt)
+  - [x] relation to Phase[]
 
 ### 2.3 Phase Model
-- [ ] Create `Phase` model in `schema.prisma`
-  - [ ] id, missionId (FK)
-  - [ ] number, name, description
-  - [ ] status (PhaseStatus)
-  - [ ] isParallel
-  - [ ] timestamps (startedAt, completedAt)
-  - [ ] relation to Task[]
-  - [ ] unique constraint [missionId, number]
+- [x] Create `Phase` model in `schema.prisma`
+  - [x] id, missionId (FK)
+  - [x] number, name, description
+  - [x] status (PhaseStatus)
+  - [x] isParallel
+  - [x] timestamps (startedAt, completedAt)
+  - [x] relation to Task[]
+  - [x] unique constraint [missionId, number]
 
 ### 2.4 Task Model Extension
-- [ ] Add `phaseId` field (optional FK to Phase)
-- [ ] Add `callerType` field (CallerType)
-- [ ] Add `agentName` field (String, optional)
-- [ ] Add `agentPrompt` field (String, optional)
-- [ ] Add indexes for new fields
+- [x] Add `phaseId` field (optional FK to Phase)
+- [x] Add `callerType` field (CallerType)
+- [x] Add `agentName` field (String, optional)
+- [x] Add `agentPrompt` field (String, optional)
+- [x] Add indexes for new fields
 
 ### 2.5 Migration
-- [ ] Generate Prisma migration
-- [ ] Test migration on clean DB
-- [ ] Test migration on existing DB (backward compat)
-- [ ] Verify all relations work
+- [x] Generate Prisma migration
+- [x] Test migration on clean DB
+- [x] Test migration on existing DB (backward compat)
+- [x] Verify all relations work
 
 **Completion Criteria**:
-- `pnpm prisma migrate deploy` succeeds
-- New models accessible via Prisma client
-- Existing Workflow/Task data preserved
+- [x] `pnpm prisma migrate deploy` succeeds
+- [x] New models accessible via Prisma client
+- [x] Existing Workflow/Task data preserved
 
 ---
 
@@ -396,13 +396,13 @@
 ### Current Status
 
 ```
-Phase 1: Merge & Reorganize    [■■■■■■■■░░] 90%
-Phase 2: Schema Extension      [ ] 0%
-Phase 3: MCP Tools Extension   [ ] 0%
-Phase 4: Agent Adaptation      [ ] 0%
-Phase 5: WebUI Adaptation      [ ] 0%
-Phase 6: Setup Script          [ ] 0%
-Phase 7: Documentation         [ ] 0%
+Phase 1: Merge & Reorganize    [■■■■■■■■■■] 100%
+Phase 2: Schema Extension      [■■■■■■■■■■] 100%
+Phase 3: MCP Tools Extension   [          ] 0%
+Phase 4: Agent Adaptation      [          ] 0%
+Phase 5: WebUI Adaptation      [          ] 0%
+Phase 6: Setup Script          [          ] 0%
+Phase 7: Documentation         [          ] 0%
 ```
 
 ### Session Log
@@ -411,6 +411,7 @@ Phase 7: Documentation         [ ] 0%
 |------|-------|-----------------|-------|
 | 2024-12-27 | 0 | Created VISION.md, ROADMAP.md | Initial planning |
 | 2024-12-27 | 1 | Renamed to mission-control, imported mission-system, created scripts/ | documentations/ cleanup deferred to Phase 7 |
+| 2024-12-27 | 2 | Added Mission, Phase models + CallerType context to Task | SQLite compatible (enums as TEXT) |
 
 ---
 

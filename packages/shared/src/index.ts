@@ -46,6 +46,8 @@ export {
   type Milestone,
   type Prisma,
   type ServerInfo,
+  type Mission,
+  type Phase,
 } from '@prisma/client'
 
 // ============================================
@@ -92,6 +94,40 @@ export const TestsStatus = {
   NOT_RUN: 'NOT_RUN',
 } as const
 export type TestsStatus = (typeof TestsStatus)[keyof typeof TestsStatus]
+
+// ============================================
+// MISSION SYSTEM ENUMS
+// ============================================
+
+export const MissionProfile = {
+  SIMPLE: 'SIMPLE',     // 2 phases
+  STANDARD: 'STANDARD', // 3 phases
+  COMPLEX: 'COMPLEX',   // 4+ phases, parallel
+} as const
+export type MissionProfile = (typeof MissionProfile)[keyof typeof MissionProfile]
+
+export const MissionStatus = {
+  PENDING: 'PENDING',
+  IN_PROGRESS: 'IN_PROGRESS',
+  COMPLETED: 'COMPLETED',
+  FAILED: 'FAILED',
+  BLOCKED: 'BLOCKED', // Waiting for human intervention
+} as const
+export type MissionStatus = (typeof MissionStatus)[keyof typeof MissionStatus]
+
+export const PhaseStatus = {
+  PENDING: 'PENDING',
+  IN_PROGRESS: 'IN_PROGRESS',
+  COMPLETED: 'COMPLETED',
+  FAILED: 'FAILED',
+} as const
+export type PhaseStatus = (typeof PhaseStatus)[keyof typeof PhaseStatus]
+
+export const CallerType = {
+  ORCHESTRATOR: 'ORCHESTRATOR',
+  SUBAGENT: 'SUBAGENT',
+} as const
+export type CallerType = (typeof CallerType)[keyof typeof CallerType]
 
 // ============================================
 // ZOD VALIDATION SCHEMAS

@@ -13,6 +13,10 @@ import {
   DecisionCategory,
   IssueType,
   TestsStatus,
+  MissionProfile,
+  MissionStatus,
+  PhaseStatus,
+  CallerType,
 } from '@mission-control/shared'
 
 // ============================================
@@ -68,7 +72,67 @@ export const testsStatusMap: Record<string, TestsStatus> = {
 }
 
 // ============================================
+// MISSION SYSTEM CONVERSION MAPS
+// ============================================
+
+/**
+ * Mission profile conversion map
+ * MCP input: 'simple' | 'standard' | 'complex'
+ * Prisma enum: MissionProfile
+ */
+export const missionProfileMap: Record<string, MissionProfile> = {
+  simple: MissionProfile.SIMPLE,
+  standard: MissionProfile.STANDARD,
+  complex: MissionProfile.COMPLEX,
+}
+
+/**
+ * Mission status conversion map
+ * MCP input: 'pending' | 'in_progress' | 'completed' | 'failed' | 'blocked'
+ * Prisma enum: MissionStatus
+ */
+export const missionStatusMap: Record<string, MissionStatus> = {
+  pending: MissionStatus.PENDING,
+  in_progress: MissionStatus.IN_PROGRESS,
+  completed: MissionStatus.COMPLETED,
+  failed: MissionStatus.FAILED,
+  blocked: MissionStatus.BLOCKED,
+}
+
+/**
+ * Phase status conversion map
+ * MCP input: 'pending' | 'in_progress' | 'completed' | 'failed'
+ * Prisma enum: PhaseStatus
+ */
+export const phaseStatusMap: Record<string, PhaseStatus> = {
+  pending: PhaseStatus.PENDING,
+  in_progress: PhaseStatus.IN_PROGRESS,
+  completed: PhaseStatus.COMPLETED,
+  failed: PhaseStatus.FAILED,
+}
+
+/**
+ * Caller type conversion map
+ * MCP input: 'orchestrator' | 'subagent'
+ * Prisma enum: CallerType
+ */
+export const callerTypeMap: Record<string, CallerType> = {
+  orchestrator: CallerType.ORCHESTRATOR,
+  subagent: CallerType.SUBAGENT,
+}
+
+// ============================================
 // RE-EXPORTS (for direct usage)
 // ============================================
 
-export { WorkflowStatus, TaskStatus, DecisionCategory, IssueType, TestsStatus }
+export {
+  WorkflowStatus,
+  TaskStatus,
+  DecisionCategory,
+  IssueType,
+  TestsStatus,
+  MissionProfile,
+  MissionStatus,
+  PhaseStatus,
+  CallerType,
+}
