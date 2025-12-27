@@ -36,6 +36,16 @@ import {
   completeTaskTool,
   handleCompleteTask,
 } from './tools/complete-task.js'
+// Mission system tools
+import {
+  startMissionTool,
+  handleStartMission,
+} from './tools/start-mission.js'
+import {
+  completeMissionTool,
+  handleCompleteMission,
+} from './tools/complete-mission.js'
+import { getContextTool, handleGetContext } from './tools/get-context.js'
 
 // Import error types
 import { McpError, ValidationError, NotFoundError } from './utils/errors.js'
@@ -74,12 +84,19 @@ function createServer(): Server {
   // Register tool list handler
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: [
+      // Legacy workflow tools
       startWorkflowTool,
+      // Mission system tools
+      startMissionTool,
+      completeMissionTool,
+      getContextTool,
+      // Task tools (extended for mission support)
       startTaskTool,
+      completeTaskTool,
+      // Logging tools
       logDecisionTool,
       logIssueTool,
       logMilestoneTool,
-      completeTaskTool,
     ],
   }))
 
@@ -105,12 +122,28 @@ async function handleToolCall(
   args: unknown
 ): Promise<CallToolResult> {
   switch (name) {
+    // Legacy workflow
     case 'start_workflow':
       return handleStartWorkflow(args)
 
+    // Mission system
+    case 'start_mission':
+      return handleStartMission(args)
+
+    case 'complete_mission':
+      return handleCompleteMission(args)
+
+    case 'get_context':
+      return handleGetContext(args)
+
+    // Task tools
     case 'start_task':
       return handleStartTask(args)
 
+    case 'complete_task':
+      return handleCompleteTask(args)
+
+    // Logging tools
     case 'log_decision':
       return handleLogDecision(args)
 
@@ -119,9 +152,6 @@ async function handleToolCall(
 
     case 'log_milestone':
       return handleLogMilestone(args)
-
-    case 'complete_task':
-      return handleCompleteTask(args)
 
     default:
       throw new McpError(`Unknown tool: ${name}`, 'UNKNOWN_TOOL')

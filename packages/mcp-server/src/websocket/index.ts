@@ -14,6 +14,10 @@ export {
   emitDecisionCreated,
   emitIssueCreated,
   emitMilestoneCreated,
+  emitMissionCreated,
+  emitMissionUpdated,
+  emitPhaseCreated,
+  emitPhaseUpdated,
 } from './events.js'
 export type {
   EventName,
@@ -24,4 +28,8 @@ export type {
   DecisionCreatedEvent,
   IssueCreatedEvent,
   MilestoneCreatedEvent,
+  MissionCreatedEvent,
+  MissionUpdatedEvent,
+  PhaseCreatedEvent,
+  PhaseUpdatedEvent,
 } from './events.js'

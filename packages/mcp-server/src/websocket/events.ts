@@ -10,6 +10,8 @@ import type {
   Decision,
   Issue,
   Milestone,
+  Mission,
+  Phase,
 } from '@prisma/client'
 import { getIO } from './server.js'
 import { createLogger } from '../utils/logger.js'
@@ -56,6 +58,25 @@ export interface MilestoneCreatedEvent {
   workflowId: string
 }
 
+// Mission System Events
+export interface MissionCreatedEvent {
+  mission: Mission
+}
+
+export interface MissionUpdatedEvent {
+  mission: Mission
+}
+
+export interface PhaseCreatedEvent {
+  phase: Phase
+  missionId: string
+}
+
+export interface PhaseUpdatedEvent {
+  phase: Phase
+  missionId: string
+}
+
 // ============================================
 // Event Names (constants for type safety)
 // ============================================
@@ -73,6 +94,11 @@ export const EVENTS = {
   ISSUE_CREATED: 'issue:created',
   // Milestone events
   MILESTONE_CREATED: 'milestone:created',
+  // Mission system events
+  MISSION_CREATED: 'mission:created',
+  MISSION_UPDATED: 'mission:updated',
+  PHASE_CREATED: 'phase:created',
+  PHASE_UPDATED: 'phase:updated',
   // Stats update (for dashboard)
   STATS_UPDATED: 'stats:updated',
 } as const
@@ -208,4 +234,78 @@ export function emitMilestoneCreated(
   io.to(`workflow:${workflowId}`).emit(EVENTS.MILESTONE_CREATED, event)
 
   logger.info('Emitted milestone created', { event: EVENTS.MILESTONE_CREATED, milestoneId: milestone.id, taskId, workflowId })
+}
+
+// ============================================
+// Mission System Emit Functions
+// ============================================
+
+/**
+ * Emit a mission created event to all connected clients.
+ */
+export function emitMissionCreated(mission: Mission): void {
+  const io = getIO()
+  if (!io) return
+
+  const event: MissionCreatedEvent = { mission }
+  io.emit(EVENTS.MISSION_CREATED, event)
+  io.emit(EVENTS.STATS_UPDATED, { timestamp: new Date().toISOString() })
+
+  logger.info('Emitted mission created', { event: EVENTS.MISSION_CREATED, missionId: mission.id })
+}
+
+/**
+ * Emit a mission updated event to all clients and mission room.
+ */
+export function emitMissionUpdated(mission: Mission): void {
+  const io = getIO()
+  if (!io) return
+
+  const event: MissionUpdatedEvent = { mission }
+
+  // Emit to all clients (for list view)
+  io.emit(EVENTS.MISSION_UPDATED, event)
+
+  // Emit to mission-specific room (for detail view)
+  io.to(`mission:${mission.id}`).emit(EVENTS.MISSION_UPDATED, event)
+
+  io.emit(EVENTS.STATS_UPDATED, { timestamp: new Date().toISOString() })
+
+  logger.info('Emitted mission updated', { event: EVENTS.MISSION_UPDATED, missionId: mission.id })
+}
+
+/**
+ * Emit a phase created event.
+ */
+export function emitPhaseCreated(phase: Phase, missionId: string): void {
+  const io = getIO()
+  if (!io) return
+
+  const event: PhaseCreatedEvent = { phase, missionId }
+
+  // Emit to all clients
+  io.emit(EVENTS.PHASE_CREATED, event)
+
+  // Emit to mission-specific room
+  io.to(`mission:${missionId}`).emit(EVENTS.PHASE_CREATED, event)
+
+  logger.info('Emitted phase created', { event: EVENTS.PHASE_CREATED, phaseId: phase.id, missionId })
+}
+
+/**
+ * Emit a phase updated event (e.g., phase completed).
+ */
+export function emitPhaseUpdated(phase: Phase, missionId: string): void {
+  const io = getIO()
+  if (!io) return
+
+  const event: PhaseUpdatedEvent = { phase, missionId }
+
+  // Emit to all clients
+  io.emit(EVENTS.PHASE_UPDATED, event)
+
+  // Emit to mission-specific room
+  io.to(`mission:${missionId}`).emit(EVENTS.PHASE_UPDATED, event)
+
+  logger.info('Emitted phase updated', { event: EVENTS.PHASE_UPDATED, phaseId: phase.id, missionId })
 }

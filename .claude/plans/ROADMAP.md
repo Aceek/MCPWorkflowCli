@@ -6,7 +6,7 @@
 |-------|------|------|--------|
 | 1 | **Merge & Reorganize** | Single repo with proper structure | `completed` |
 | 2 | **Schema Extension** | Add Mission, Phase, CallerType to DB | `completed` |
-| 3 | **MCP Tools Extension** | 8 simplified tools + phase auto-management | `pending` |
+| 3 | **MCP Tools Extension** | 8 simplified tools + phase auto-management | `completed` |
 | 4 | **Agent Adaptation** | Update agent prompts for MCP | `pending` |
 | 5 | **WebUI Adaptation** | Mission/Phase hierarchy views | `pending` |
 | 6 | **Setup Script** | Guided installation + verification | `pending` |
@@ -105,93 +105,93 @@
 
 ---
 
-## Phase 3: MCP Tools Extension
+## Phase 3: MCP Tools Extension ✅
 
 **Goal**: Simplified tool set (8 tools) for mission orchestration
 
 ### 3.1 New Tools
 
 #### start_mission (replaces start_workflow)
-- [ ] Define Zod schema:
+- [x] Define Zod schema:
   - name (required), objective (required)
   - profile (optional): simple | standard | complex
   - total_phases (optional): number
   - scope, constraints (optional)
-- [ ] Create `tools/start-mission.ts`
-- [ ] Create Mission record in DB
-- [ ] Return mission_id, created_at
-- [ ] Emit WebSocket event `mission:created`
-- [ ] Register tool in MCP server
-- [ ] Add backward compat: `start_workflow` as alias
+- [x] Create `tools/start-mission.ts`
+- [x] Create Mission record in DB
+- [x] Return mission_id, created_at
+- [x] Emit WebSocket event `mission:created`
+- [x] Register tool in MCP server
+- [x] Add backward compat: `start_workflow` as alias
 
 #### complete_mission
-- [ ] Define Zod schema:
+- [x] Define Zod schema:
   - mission_id (required)
   - status: completed | failed | partial
   - summary (required)
   - achievements, limitations (optional)
-- [ ] Create `tools/complete-mission.ts`
-- [ ] Update Mission status + completedAt
-- [ ] Aggregate mission metrics (duration, tasks, files)
-- [ ] Return mission summary
-- [ ] Emit WebSocket event `mission:completed`
-- [ ] Register tool in MCP server
+- [x] Create `tools/complete-mission.ts`
+- [x] Update Mission status + completedAt
+- [x] Aggregate mission metrics (duration, tasks, files)
+- [x] Return mission summary
+- [x] Emit WebSocket event `mission:completed`
+- [x] Register tool in MCP server
 
 #### get_context (unified query)
-- [ ] Define Zod schema:
+- [x] Define Zod schema:
   - mission_id (required)
   - include[]: decisions | milestones | blockers | phase_summary | tasks
   - filter (optional): { phase?, agent?, since? }
-- [ ] Create `tools/get-context.ts`
-- [ ] Query decisions (with phase/agent filter)
-- [ ] Query milestones (with phase filter)
-- [ ] Query blockers (issues with requiresHumanReview=true)
-- [ ] Query phase summary (status, tasks count, duration)
-- [ ] Return unified context object
-- [ ] Register tool in MCP server
+- [x] Create `tools/get-context.ts`
+- [x] Query decisions (with phase/agent filter)
+- [x] Query milestones (with phase filter)
+- [x] Query blockers (issues with requiresHumanReview=true)
+- [x] Query phase summary (status, tasks count, duration)
+- [x] Return unified context object
+- [x] Register tool in MCP server
 
 ### 3.2 Extend Existing Tools
 
 #### start_task (extended)
-- [ ] Add `mission_id` to input schema (optional, for mission context)
-- [ ] Add `phase` to input schema (number, optional)
-- [ ] Add `phase_name` to input schema (optional, for first task of phase)
-- [ ] Add `caller_type` to input schema (required): orchestrator | subagent
-- [ ] Add `agent_name` to input schema (optional)
-- [ ] Implement phase auto-creation:
-  - [ ] If phase doesn't exist for mission_id + phase number, create it
-  - [ ] Use phase_name if provided, else "Phase {n}"
-  - [ ] Emit `phase:created` event
-- [ ] Update DB write to include new fields
-- [ ] Maintain backward compat (workflow_id still works)
+- [x] Add `mission_id` to input schema (optional, for mission context)
+- [x] Add `phase` to input schema (number, optional)
+- [x] Add `phase_name` to input schema (optional, for first task of phase)
+- [x] Add `caller_type` to input schema (required): orchestrator | subagent
+- [x] Add `agent_name` to input schema (optional)
+- [x] Implement phase auto-creation:
+  - [x] If phase doesn't exist for mission_id + phase number, create it
+  - [x] Use phase_name if provided, else "Phase {n}"
+  - [x] Emit `phase:created` event
+- [x] Update DB write to include new fields
+- [x] Maintain backward compat (workflow_id still works)
 
 #### complete_task (extended)
-- [ ] Add `phase_complete` to input schema (boolean, default false)
-- [ ] If phase_complete=true:
-  - [ ] Update Phase status to COMPLETED
-  - [ ] Set Phase completedAt
-  - [ ] Update Mission currentPhase
-  - [ ] Emit `phase:completed` event
-- [ ] Include phase_status in response
+- [x] Add `phase_complete` to input schema (boolean, default false)
+- [x] If phase_complete=true:
+  - [x] Update Phase status to COMPLETED
+  - [x] Set Phase completedAt
+  - [x] Update Mission currentPhase
+  - [x] Emit `phase:completed` event
+- [x] Include phase_status in response
 
 ### 3.3 Unchanged Tools
-- [ ] Verify `log_decision` works with new schema (task linked to phase)
-- [ ] Verify `log_issue` works with new schema
-- [ ] Verify `log_milestone` works with new schema
+- [x] Verify `log_decision` works with new schema (task linked to phase)
+- [x] Verify `log_issue` works with new schema
+- [x] Verify `log_milestone` works with new schema
 
 ### 3.4 Tool Registration
-- [ ] Update `index.ts` to register new tools
-- [ ] Update ListToolsRequestSchema handler
-- [ ] Update CallToolRequestSchema handler
-- [ ] Deprecate `start_workflow` (keep as alias)
+- [x] Update `index.ts` to register new tools
+- [x] Update ListToolsRequestSchema handler
+- [x] Update CallToolRequestSchema handler
+- [x] Deprecate `start_workflow` (keep as alias)
 - [ ] Test all 8 tools via MCP client
 
 **Completion Criteria**:
-- 8 tools registered and callable
-- Phase auto-management working (create/complete)
-- Backward compat for start_workflow
-- WebSocket events emitted correctly
-- All tools tested end-to-end
+- [x] 8 tools registered and callable
+- [x] Phase auto-management working (create/complete)
+- [x] Backward compat for start_workflow
+- [x] WebSocket events emitted correctly
+- [ ] All tools tested end-to-end
 
 ---
 
@@ -398,7 +398,7 @@
 ```
 Phase 1: Merge & Reorganize    [■■■■■■■■■■] 100%
 Phase 2: Schema Extension      [■■■■■■■■■■] 100%
-Phase 3: MCP Tools Extension   [          ] 0%
+Phase 3: MCP Tools Extension   [■■■■■■■■■■] 100%
 Phase 4: Agent Adaptation      [          ] 0%
 Phase 5: WebUI Adaptation      [          ] 0%
 Phase 6: Setup Script          [          ] 0%
@@ -412,6 +412,7 @@ Phase 7: Documentation         [          ] 0%
 | 2024-12-27 | 0 | Created VISION.md, ROADMAP.md | Initial planning |
 | 2024-12-27 | 1 | Renamed to mission-control, imported mission-system, created scripts/ | documentations/ cleanup deferred to Phase 7 |
 | 2024-12-27 | 2 | Added Mission, Phase models + CallerType context to Task | SQLite compatible (enums as TEXT) |
+| 2024-12-27 | 3 | Implemented 9 MCP tools with mission/phase support | start_mission, complete_mission, get_context + extended start/complete_task |
 
 ---
 
