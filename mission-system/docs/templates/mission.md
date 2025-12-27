@@ -1,15 +1,15 @@
-# Mission Template
+# Workflow Definition Template
 
 <instructions>
 Replace all <placeholders> with actual values.
 Delete this instructions block after filling.
-IMPORTANT: mission_id is obtained from start_mission MCP tool call.
+IMPORTANT: workflow_id is obtained from start_workflow MCP tool call.
 </instructions>
 
 ```markdown
-# Mission: <mission_name>
+# Workflow: <workflow_name>
 
-**Mission ID**: `<mission_id>`
+**Workflow ID**: `<workflow_id>`
 **Profile**: <simple|standard|complex>
 **Created**: <ISO_timestamp>
 
@@ -42,7 +42,7 @@ IMPORTANT: mission_id is obtained from start_mission MCP tool call.
 
 | Field | Purpose | Token Budget |
 |-------|---------|--------------|
-| Mission ID | Links to MCP database | Required |
+| Workflow ID | Links to MCP database | Required |
 | Profile | Complexity level | simple/standard/complex |
 | Objective | North star for all agents | 50 tokens max |
 | Scope | Prevent scope creep | Use table format |
@@ -53,11 +53,11 @@ IMPORTANT: mission_id is obtained from start_mission MCP tool call.
 
 ## MCP Integration
 
-The `mission_id` is obtained by calling:
+The `workflow_id` is obtained by calling:
 
 ```
-start_mission({
-  name: "<mission_name>",
+start_workflow({
+  name: "<workflow_name>",
   objective: "<objective>",
   profile: "simple" | "standard" | "complex",
   total_phases: <number>,
@@ -69,11 +69,11 @@ start_mission({
 Response contains:
 ```json
 {
-  "mission_id": "clxxx...",
+  "workflow_id": "clxxx...",
   "profile": "standard",
   "total_phases": 3,
   "created_at": "2024-12-27T..."
 }
 ```
 
-Store `mission_id` in this file and in workflow.md.
+Store `workflow_id` in this file and in workflow.md.
