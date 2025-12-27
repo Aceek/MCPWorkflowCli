@@ -81,6 +81,26 @@ export interface TaskJsonFields {
 }
 
 /**
+ * Task array field names that need JSON conversion
+ */
+const TASK_ARRAY_FIELDS = [
+  'areas',
+  'achievements',
+  'limitations',
+  'nextSteps',
+  'packagesAdded',
+  'packagesRemoved',
+  'commandsExecuted',
+  'filesAdded',
+  'filesModified',
+  'filesDeleted',
+  'unexpectedFiles',
+  'warnings',
+] as const
+
+type TaskArrayField = (typeof TASK_ARRAY_FIELDS)[number]
+
+/**
  * Convert Task arrays to JSON strings for SQLite insert/update
  */
 export function taskFieldsToJson(fields: {
@@ -100,19 +120,18 @@ export function taskFieldsToJson(fields: {
 }): Partial<TaskJsonFields> {
   const result: Partial<TaskJsonFields> = {}
 
-  if (fields.areas !== undefined) result.areas = toJsonArray(fields.areas)
-  if (fields.achievements !== undefined) result.achievements = toJsonArray(fields.achievements)
-  if (fields.limitations !== undefined) result.limitations = toJsonArray(fields.limitations)
-  if (fields.nextSteps !== undefined) result.nextSteps = toJsonArray(fields.nextSteps)
-  if (fields.packagesAdded !== undefined) result.packagesAdded = toJsonArray(fields.packagesAdded)
-  if (fields.packagesRemoved !== undefined) result.packagesRemoved = toJsonArray(fields.packagesRemoved)
-  if (fields.commandsExecuted !== undefined) result.commandsExecuted = toJsonArray(fields.commandsExecuted)
-  if (fields.filesAdded !== undefined) result.filesAdded = toJsonArray(fields.filesAdded)
-  if (fields.filesModified !== undefined) result.filesModified = toJsonArray(fields.filesModified)
-  if (fields.filesDeleted !== undefined) result.filesDeleted = toJsonArray(fields.filesDeleted)
-  if (fields.unexpectedFiles !== undefined) result.unexpectedFiles = toJsonArray(fields.unexpectedFiles)
-  if (fields.warnings !== undefined) result.warnings = toJsonArray(fields.warnings)
-  if (fields.snapshotData !== undefined) result.snapshotData = toJsonObject(fields.snapshotData)
+  // Process array fields using the constant list
+  for (const field of TASK_ARRAY_FIELDS) {
+    const value = fields[field]
+    if (value !== undefined) {
+      result[field] = toJsonArray(value)
+    }
+  }
+
+  // Handle snapshotData separately (object, not array)
+  if (fields.snapshotData !== undefined) {
+    result.snapshotData = toJsonObject(fields.snapshotData)
+  }
 
   return result
 }
@@ -149,19 +168,14 @@ export function taskFieldsFromJson(task: {
   warnings: string[]
   snapshotData: Record<string, unknown> | null
 } {
+  // Build result using the constant list for array fields
+  const result = {} as Record<TaskArrayField, string[]>
+  for (const field of TASK_ARRAY_FIELDS) {
+    result[field] = fromJsonArray(task[field])
+  }
+
   return {
-    areas: fromJsonArray(task.areas),
-    achievements: fromJsonArray(task.achievements),
-    limitations: fromJsonArray(task.limitations),
-    nextSteps: fromJsonArray(task.nextSteps),
-    packagesAdded: fromJsonArray(task.packagesAdded),
-    packagesRemoved: fromJsonArray(task.packagesRemoved),
-    commandsExecuted: fromJsonArray(task.commandsExecuted),
-    filesAdded: fromJsonArray(task.filesAdded),
-    filesModified: fromJsonArray(task.filesModified),
-    filesDeleted: fromJsonArray(task.filesDeleted),
-    unexpectedFiles: fromJsonArray(task.unexpectedFiles),
-    warnings: fromJsonArray(task.warnings),
+    ...result,
     snapshotData: fromJsonObject(task.snapshotData),
   }
 }
