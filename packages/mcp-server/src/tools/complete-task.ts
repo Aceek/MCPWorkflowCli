@@ -17,11 +17,8 @@ import {
   fromJsonArray,
   fromJsonObject,
 } from '../utils/json-fields.js'
-import { checkAndUpdateWorkflowStatus } from '../utils/workflow-metrics.js'
-import {
-  emitTaskUpdated,
-  emitWorkflowUpdated,
-} from '../websocket/index.js'
+import { updateWorkflowMetrics } from '../utils/workflow-metrics.js'
+import { emitTaskUpdated } from '../websocket/index.js'
 import { NotFoundError, ValidationError } from '../utils/errors.js'
 import {
   taskStatusMap,
@@ -261,12 +258,8 @@ export async function handleCompleteTask(
     },
   }
 
-  // Check if workflow should be completed (all tasks complete)
-  const updatedWorkflow = await checkAndUpdateWorkflowStatus(task.workflowId)
-  if (updatedWorkflow) {
-    emitWorkflowUpdated(updatedWorkflow)
-    response.workflow_status = updatedWorkflow.status
-  }
+  // Update workflow metrics (but NOT status - only orchestrator can complete workflow)
+  await updateWorkflowMetrics(task.workflowId)
 
   return {
     content: [
