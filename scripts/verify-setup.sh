@@ -1,5 +1,5 @@
 #!/bin/bash
-# Mission Control - Setup Verification Script
+# Workflow Control - Setup Verification Script
 # Comprehensive diagnostic for troubleshooting setup issues
 
 set -e
@@ -19,8 +19,8 @@ SHARED_DIR="$PROJECT_DIR/packages/shared"
 MCP_SERVER_DIR="$PROJECT_DIR/packages/mcp-server"
 DB_PATH="$SHARED_DIR/prisma/mcp-tracker.db"
 MCP_CONFIG="$PROJECT_DIR/.mcp.json"
-SYMLINK_DOCS="$HOME/.claude/docs/mission-system"
-SYMLINK_AGENT="$HOME/.claude/agents/mission-architect.md"
+SYMLINK_DOCS="$HOME/.claude/docs/workflow-system"
+SYMLINK_AGENT="$HOME/.claude/agents/workflow-architect.md"
 
 # Counters
 ERRORS=0
@@ -34,7 +34,7 @@ while [[ $# -gt 0 ]]; do
     -v|--verbose) VERBOSE=true; shift ;;
     --fix) FIX=true; shift ;;
     -h|--help)
-      echo "Mission Control - Setup Verification"
+      echo "Workflow Control - Setup Verification"
       echo ""
       echo "Usage: ./verify-setup.sh [OPTIONS]"
       echo ""
@@ -52,7 +52,7 @@ done
 print_header() {
   echo ""
   echo -e "${CYAN}╔══════════════════════════════════════════════════╗${NC}"
-  echo -e "${CYAN}║${NC}     ${BLUE}Mission Control - Setup Verification${NC}         ${CYAN}║${NC}"
+  echo -e "${CYAN}║${NC}     ${BLUE}Workflow Control - Setup Verification${NC}        ${CYAN}║${NC}"
   echo -e "${CYAN}╚══════════════════════════════════════════════════╝${NC}"
   echo ""
 }
@@ -140,8 +140,8 @@ check_database_tables() {
     return 1
   fi
 
-  # Check required tables
-  local tables=("Mission" "Phase" "Task" "Workflow" "Decision" "Issue" "Milestone")
+  # Check required tables (Workflow replaces Mission)
+  local tables=("Workflow" "Phase" "Task" "Decision" "Issue" "Milestone")
   local missing=0
 
   for table in "${tables[@]}"; do
@@ -393,7 +393,7 @@ print_summary() {
   else
     echo -e "${RED}$ERRORS error(s), $WARNINGS warning(s)${NC}"
     echo ""
-    echo "Fix the errors above before using Mission Control."
+    echo "Fix the errors above before using Workflow Control."
     echo ""
     echo -e "Quick fix: ${CYAN}./scripts/verify-setup.sh --fix${NC}"
   fi
