@@ -80,6 +80,47 @@ export const EVENTS = {
 export type EventName = (typeof EVENTS)[keyof typeof EVENTS]
 
 // ============================================
+// Generic Emit Helper
+// ============================================
+
+interface EmitOptions {
+  eventName: EventName
+  payload: unknown
+  workflowId?: string
+  broadcastToAll?: boolean
+  emitStats?: boolean
+  logData?: Record<string, unknown>
+}
+
+/**
+ * Generic helper to emit WebSocket events with consistent behavior.
+ * Reduces repetition across emit functions.
+ */
+function emitEvent(options: EmitOptions): void {
+  const io = getIO()
+  if (!io) return
+
+  const { eventName, payload, workflowId, broadcastToAll = false, emitStats = false, logData = {} } = options
+
+  // Emit to all clients if requested (for list views)
+  if (broadcastToAll) {
+    io.emit(eventName, payload)
+  }
+
+  // Emit to workflow-specific room if workflowId provided (for detail views)
+  if (workflowId) {
+    io.to(`workflow:${workflowId}`).emit(eventName, payload)
+  }
+
+  // Emit stats update if requested (triggers dashboard refresh)
+  if (emitStats) {
+    io.emit(EVENTS.STATS_UPDATED, { timestamp: new Date().toISOString() })
+  }
+
+  logger.info(`Emitted ${eventName}`, { event: eventName, ...logData })
+}
+
+// ============================================
 // Emit Functions
 // ============================================
 
@@ -87,70 +128,53 @@ export type EventName = (typeof EVENTS)[keyof typeof EVENTS]
  * Emit a workflow created event to all connected clients.
  */
 export function emitWorkflowCreated(workflow: Workflow): void {
-  const io = getIO()
-  if (!io) return
-
-  const event: WorkflowCreatedEvent = { workflow }
-  io.emit(EVENTS.WORKFLOW_CREATED, event)
-  io.emit(EVENTS.STATS_UPDATED, { timestamp: new Date().toISOString() })
-
-  logger.info('Emitted workflow created', { event: EVENTS.WORKFLOW_CREATED, workflowId: workflow.id })
+  emitEvent({
+    eventName: EVENTS.WORKFLOW_CREATED,
+    payload: { workflow } satisfies WorkflowCreatedEvent,
+    broadcastToAll: true,
+    emitStats: true,
+    logData: { workflowId: workflow.id },
+  })
 }
 
 /**
  * Emit a workflow updated event to all clients and workflow room.
  */
 export function emitWorkflowUpdated(workflow: Workflow): void {
-  const io = getIO()
-  if (!io) return
-
-  const event: WorkflowUpdatedEvent = { workflow }
-
-  // Emit to all clients (for list view)
-  io.emit(EVENTS.WORKFLOW_UPDATED, event)
-
-  // Emit to workflow-specific room (for detail view)
-  io.to(`workflow:${workflow.id}`).emit(EVENTS.WORKFLOW_UPDATED, event)
-
-  io.emit(EVENTS.STATS_UPDATED, { timestamp: new Date().toISOString() })
-
-  logger.info('Emitted workflow updated', { event: EVENTS.WORKFLOW_UPDATED, workflowId: workflow.id })
+  emitEvent({
+    eventName: EVENTS.WORKFLOW_UPDATED,
+    payload: { workflow } satisfies WorkflowUpdatedEvent,
+    workflowId: workflow.id,
+    broadcastToAll: true,
+    emitStats: true,
+    logData: { workflowId: workflow.id },
+  })
 }
 
 /**
  * Emit a task created event.
  */
 export function emitTaskCreated(task: Task, workflowId: string): void {
-  const io = getIO()
-  if (!io) return
-
-  const event: TaskCreatedEvent = { task, workflowId }
-
-  // Emit to all clients
-  io.emit(EVENTS.TASK_CREATED, event)
-
-  // Emit to workflow-specific room
-  io.to(`workflow:${workflowId}`).emit(EVENTS.TASK_CREATED, event)
-
-  logger.info('Emitted task created', { event: EVENTS.TASK_CREATED, taskId: task.id, workflowId })
+  emitEvent({
+    eventName: EVENTS.TASK_CREATED,
+    payload: { task, workflowId } satisfies TaskCreatedEvent,
+    workflowId,
+    broadcastToAll: true,
+    logData: { taskId: task.id, workflowId },
+  })
 }
 
 /**
  * Emit a task updated event (e.g., task completed).
  */
 export function emitTaskUpdated(task: Task, workflowId: string): void {
-  const io = getIO()
-  if (!io) return
-
-  const event: TaskUpdatedEvent = { task, workflowId }
-
-  // Emit to all clients
-  io.emit(EVENTS.TASK_UPDATED, event)
-
-  // Emit to workflow-specific room
-  io.to(`workflow:${workflowId}`).emit(EVENTS.TASK_UPDATED, event)
-
-  logger.info('Emitted task updated', { event: EVENTS.TASK_UPDATED, taskId: task.id, workflowId })
+  emitEvent({
+    eventName: EVENTS.TASK_UPDATED,
+    payload: { task, workflowId } satisfies TaskUpdatedEvent,
+    workflowId,
+    broadcastToAll: true,
+    logData: { taskId: task.id, workflowId },
+  })
 }
 
 /**
@@ -161,15 +185,12 @@ export function emitDecisionCreated(
   taskId: string,
   workflowId: string
 ): void {
-  const io = getIO()
-  if (!io) return
-
-  const event: DecisionCreatedEvent = { decision, taskId, workflowId }
-
-  // Only emit to workflow-specific room (detail view)
-  io.to(`workflow:${workflowId}`).emit(EVENTS.DECISION_CREATED, event)
-
-  logger.info('Emitted decision created', { event: EVENTS.DECISION_CREATED, decisionId: decision.id, taskId, workflowId })
+  emitEvent({
+    eventName: EVENTS.DECISION_CREATED,
+    payload: { decision, taskId, workflowId } satisfies DecisionCreatedEvent,
+    workflowId,
+    logData: { decisionId: decision.id, taskId, workflowId },
+  })
 }
 
 /**
@@ -180,15 +201,12 @@ export function emitIssueCreated(
   taskId: string,
   workflowId: string
 ): void {
-  const io = getIO()
-  if (!io) return
-
-  const event: IssueCreatedEvent = { issue, taskId, workflowId }
-
-  // Only emit to workflow-specific room (detail view)
-  io.to(`workflow:${workflowId}`).emit(EVENTS.ISSUE_CREATED, event)
-
-  logger.info('Emitted issue created', { event: EVENTS.ISSUE_CREATED, issueId: issue.id, taskId, workflowId })
+  emitEvent({
+    eventName: EVENTS.ISSUE_CREATED,
+    payload: { issue, taskId, workflowId } satisfies IssueCreatedEvent,
+    workflowId,
+    logData: { issueId: issue.id, taskId, workflowId },
+  })
 }
 
 /**
@@ -199,13 +217,10 @@ export function emitMilestoneCreated(
   taskId: string,
   workflowId: string
 ): void {
-  const io = getIO()
-  if (!io) return
-
-  const event: MilestoneCreatedEvent = { milestone, taskId, workflowId }
-
-  // Only emit to workflow-specific room (detail view)
-  io.to(`workflow:${workflowId}`).emit(EVENTS.MILESTONE_CREATED, event)
-
-  logger.info('Emitted milestone created', { event: EVENTS.MILESTONE_CREATED, milestoneId: milestone.id, taskId, workflowId })
+  emitEvent({
+    eventName: EVENTS.MILESTONE_CREATED,
+    payload: { milestone, taskId, workflowId } satisfies MilestoneCreatedEvent,
+    workflowId,
+    logData: { milestoneId: milestone.id, taskId, workflowId },
+  })
 }
