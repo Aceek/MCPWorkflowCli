@@ -72,23 +72,52 @@ Types: feat, fix, refactor, docs, test, chore
 
 ---
 
-## Active Workflow
+## Workflow Lifecycle
 
-**Workflow**: code-quality-review
-**ID**: `<PENDING_start_workflow_call>`
-**Phases**: 3 (parallel execution in phases 1 and 2)
-**Path**: `.claude/workflows/code-quality-review/`
+**CRITICAL**: Design and execution are TWO SEPARATE steps.
+
+| User Intent | Action | Condition |
+|-------------|--------|-----------|
+| "Design workflow", "Create workflow", "I need a workflow for..." | Invoke agent `workflow-architect` | `.claude/workflows/<name>/` does NOT exist |
+| "Run workflow", "Execute workflow", "Start workflow" | Use MCP `start_workflow` | `.claude/workflows/<name>/` ALREADY exists |
+
+### Step 1: Design (workflow-architect agent)
+
+When user wants to CREATE a new workflow:
+1. Invoke `workflow-architect` agent
+2. Agent creates `.claude/workflows/<name>/` with:
+   - `definition.md` - Objectives, scope, constraints
+   - `workflow.md` - Phases, agents, prompts
+   - `start.md` - Orchestrator execution protocol
+3. Agent calls `start_workflow` MCP to get `workflow_id`
+4. Agent updates all files with actual `workflow_id`
+
+**Trigger phrases**: "design", "create", "I want a workflow", "help me build", "set up a workflow"
+
+### Step 2: Execute (MCP tools)
+
+When user wants to RUN an existing workflow:
+1. **FIRST**: Verify `.claude/workflows/<name>/` exists
+2. Read `start.md` for orchestrator protocol
+3. Call `start_workflow` MCP if not already started
+4. Execute phases per workflow.md
+
+**Trigger phrases**: "run", "execute", "start", "launch", "begin"
+
+### Pre-Execution Check
+
+**BEFORE calling `start_workflow` MCP tool, ALWAYS verify:**
+```bash
+ls .claude/workflows/<workflow-name>/
+```
+If folder does NOT exist → invoke `workflow-architect` agent first.
 
 ### Workflow Commands
-- "start workflow" or "execute workflow" → Begin orchestrator execution
-- "workflow status" → `get_context({workflow_id, include: ["phase_summary"]})`
-- "continue workflow" → Resume from last completed phase
-- "abort workflow" → Fail workflow and document reason
 
-### Workflow Overview
-Comprehensive code quality review across all 3 packages:
-- Phase 1: Parallel analysis (SOLID, DRY, security, clean code)
-- Phase 2: Parallel correction (conventional commits, no Claude mentions)
-- Phase 3: Final validation review
-
-**IMPORTANT**: Before starting, you MUST call `start_workflow` MCP tool to obtain workflow_id, then update all workflow files with the actual workflow_id.
+| Command | Action |
+|---------|--------|
+| "design workflow for X" | Invoke `workflow-architect` agent |
+| "run workflow X" | Execute existing workflow via MCP |
+| "workflow status" | `get_context({workflow_id, include: ["phase_summary"]})` |
+| "continue workflow" | Resume from last completed phase |
+| "abort workflow" | Fail workflow and document reason |
