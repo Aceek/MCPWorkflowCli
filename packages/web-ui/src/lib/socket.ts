@@ -12,13 +12,24 @@ const logger = createLogger('socket')
 
 // Event types (must match server-side events.ts)
 export const EVENTS = {
+  // Workflow events
   WORKFLOW_CREATED: 'workflow:created',
   WORKFLOW_UPDATED: 'workflow:updated',
+  // Task events
   TASK_CREATED: 'task:created',
   TASK_UPDATED: 'task:updated',
+  // Decision events
   DECISION_CREATED: 'decision:created',
+  // Issue events
   ISSUE_CREATED: 'issue:created',
+  // Milestone events
   MILESTONE_CREATED: 'milestone:created',
+  // Mission system events
+  MISSION_CREATED: 'mission:created',
+  MISSION_UPDATED: 'mission:updated',
+  PHASE_CREATED: 'phase:created',
+  PHASE_UPDATED: 'phase:updated',
+  // Stats update (for dashboard)
   STATS_UPDATED: 'stats:updated',
 } as const
 

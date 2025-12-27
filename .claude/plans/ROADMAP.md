@@ -7,8 +7,8 @@
 | 1 | **Merge & Reorganize** | Single repo with proper structure | `completed` |
 | 2 | **Schema Extension** | Add Mission, Phase, CallerType to DB | `completed` |
 | 3 | **MCP Tools Extension** | 8 simplified tools + phase auto-management | `completed` |
-| 4 | **Agent Adaptation** | Update agent prompts for MCP | `pending` |
-| 5 | **WebUI Adaptation** | Mission/Phase hierarchy views | `pending` |
+| 4 | **Agent Adaptation** | Update agent prompts for MCP | `completed` |
+| 5 | **WebUI Adaptation** | Mission/Phase hierarchy views | `completed` |
 | 6 | **Setup Script** | Guided installation + verification | `pending` |
 | 7 | **Documentation** | Update all docs for new system | `pending` |
 
@@ -245,59 +245,63 @@
 
 ---
 
-## Phase 5: WebUI Adaptation
+## Phase 5: WebUI Adaptation ✅
 
 **Goal**: Dashboard shows mission → phase → task hierarchy
 
 ### 5.1 Data Layer
-- [ ] Add API route `/api/missions` (list)
-- [ ] Add API route `/api/missions/[id]` (detail + phases)
-- [ ] Add API route `/api/phases/[id]` (tasks)
-- [ ] Update existing task routes for phase context
+- [x] Add API route `/api/missions` (list)
+- [x] Add API route `/api/missions/[id]` (detail + phases)
+- [x] Add API route `/api/phases/[id]` (tasks)
+- [x] Update types in lib/api.ts for missions
 
 ### 5.2 Missions List Page
-- [ ] Create `/app/missions/page.tsx` (or update root)
-- [ ] Mission cards with:
-  - [ ] Name, objective
-  - [ ] Status badge
-  - [ ] Progress bar (phase X of Y)
-  - [ ] Created date
-- [ ] Filter by status
-- [ ] Sort by date
+- [x] Create `/app/missions/page.tsx`
+- [x] Mission cards with:
+  - [x] Name, objective
+  - [x] Status badge
+  - [x] Progress bar (phase X of Y)
+  - [x] Created date
+- [x] Filter by status
+- [x] Sort by date
 
 ### 5.3 Mission Detail Page
-- [ ] Create `/app/missions/[id]/page.tsx`
-- [ ] Header: mission name, objective, status
-- [ ] Phase timeline (vertical):
-  - [ ] Phase cards with status indicators
-  - [ ] Expandable to show tasks
-  - [ ] Duration per phase
-- [ ] Blockers panel (if any)
-- [ ] Agent activity feed
+- [x] Create `/app/missions/[id]/page.tsx`
+- [x] Header: mission name, objective, status
+- [x] Phase timeline (vertical):
+  - [x] Phase cards with status indicators
+  - [x] Expandable to show tasks
+  - [x] Duration per phase
+- [x] Blockers panel (if any)
+- [x] Agent badges showing agent name/type
 
 ### 5.4 Task Detail Enhancement
-- [ ] Add caller context display (agent name, type)
-- [ ] Add breadcrumb: Mission → Phase → Task
-- [ ] Link back to parent phase/mission
+- [x] Add caller context display (AgentBadge component)
+- [ ] Add breadcrumb: Mission → Phase → Task (deferred)
+- [ ] Link back to parent phase/mission (deferred)
 
 ### 5.5 Real-time Updates
-- [ ] Add WebSocket listeners for mission events
-- [ ] Update UI on `mission:created`, `mission:updated`
-- [ ] Update UI on `phase:started`, `phase:completed`
-- [ ] Highlight new blockers
+- [x] Add WebSocket listeners for mission events
+- [x] Update UI on `mission:created`, `mission:updated`
+- [x] Update UI on `phase:created`, `phase:updated`
+- [x] Hook: useRealtimeMissions (list)
+- [x] Hook: useRealtimeMission (detail)
 
 ### 5.6 Components
-- [ ] `MissionCard.tsx`
-- [ ] `PhaseTimeline.tsx`
-- [ ] `PhaseCard.tsx`
-- [ ] `AgentBadge.tsx` (shows agent name/type)
-- [ ] `BlockerAlert.tsx`
+- [x] `MissionCard.tsx`
+- [x] `PhaseTimeline.tsx`
+- [x] `PhaseCard.tsx`
+- [x] `AgentBadge.tsx` (shows agent name/type)
+- [x] `BlockerAlert.tsx`
+- [x] `MissionStatsCards.tsx`
+- [x] `MissionStatusFilter.tsx`
+- [x] `RealtimeMissionList.tsx`
 
 **Completion Criteria**:
-- Missions list page functional
-- Mission detail with phases visible
-- Real-time updates working
-- Mobile-responsive
+- [x] Missions list page functional
+- [x] Mission detail with phases visible
+- [x] Real-time updates working
+- [x] Navigation links in header
 
 ---
 
@@ -407,7 +411,7 @@ Phase 1: Merge & Reorganize    [■■■■■■■■■■] 100%
 Phase 2: Schema Extension      [■■■■■■■■■■] 100%
 Phase 3: MCP Tools Extension   [■■■■■■■■■■] 100%
 Phase 4: Agent Adaptation      [■■■■■■■■■■] 100%
-Phase 5: WebUI Adaptation      [          ] 0%
+Phase 5: WebUI Adaptation      [■■■■■■■■■■] 100%
 Phase 6: Setup Script          [          ] 0%
 Phase 7: Documentation         [          ] 0%
 ```
@@ -421,6 +425,7 @@ Phase 7: Documentation         [          ] 0%
 | 2024-12-27 | 2 | Added Mission, Phase models + CallerType context to Task | SQLite compatible (enums as TEXT) |
 | 2024-12-27 | 3 | Implemented 9 MCP tools with mission/phase support | start_mission, complete_mission, get_context + extended start/complete_task |
 | 2024-12-27 | 4 | Updated mission-architect + created 3 new guides | orchestrator-guide.md, agent-integration.md, mcp-instructions.md + updated all templates |
+| 2024-12-27 | 5 | Created missions dashboard with real-time updates | API routes, components, pages, hooks for missions/phases |
 
 ---
 

@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { Activity, Github, BookOpen } from 'lucide-react'
+import { Activity, Github, BookOpen, ClipboardList, Target } from 'lucide-react'
 import { ThemeProvider } from '@/components/shared/ThemeProvider'
 import { ThemeToggle } from '@/components/shared/ThemeToggle'
 import { Tooltip } from '@/components/ui/tooltip'
@@ -48,6 +48,25 @@ export default function RootLayout({
                 </Link>
 
                 <nav className="flex items-center gap-1">
+                  <Tooltip content="Workflows">
+                    <Link
+                      href="/"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-[var(--radius)] text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))]"
+                    >
+                      <ClipboardList className="h-4 w-4" />
+                      <span className="sr-only">Workflows</span>
+                    </Link>
+                  </Tooltip>
+                  <Tooltip content="Missions">
+                    <Link
+                      href="/missions"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-[var(--radius)] text-[hsl(var(--muted-foreground))] transition-colors hover:bg-[hsl(var(--accent))] hover:text-[hsl(var(--accent-foreground))]"
+                    >
+                      <Target className="h-4 w-4" />
+                      <span className="sr-only">Missions</span>
+                    </Link>
+                  </Tooltip>
+                  <div className="mx-1 h-4 w-px bg-[hsl(var(--border))]" />
                   <Tooltip content="Documentation">
                     <a
                       href="https://github.com"
