@@ -1,7 +1,7 @@
 # Workflow Template
 
 <instructions>
-1. Get mission_id from mission.md (obtained via start_mission MCP call)
+1. Get workflow_id from workflow definition (obtained via start_workflow MCP call)
 2. Draw ASCII schema first (visual overview)
 3. Define phases with explicit numbers in YAML
 4. Include agent prompts with MCP instructions
@@ -11,7 +11,7 @@
 ```markdown
 # Workflow: <workflow_name>
 
-**Mission ID**: `<mission_id>`
+**Workflow ID**: `<workflow_id>`
 **Total Phases**: <count>
 
 ## Schema
@@ -53,23 +53,23 @@ phase:
 
 **Agent Prompt:**
 ```
-MISSION_ID: <mission_id>
+WORKFLOW_ID: <workflow_id>
 PHASE: 1
 CALLER_TYPE: subagent
 AGENT_NAME: <agent-name>
 
 TASK: <specific task>
-READ: .claude/missions/<name>/mission.md
+READ: .claude/workflows/<name>/workflow.md
 SCOPE: <paths/components>
 
 DELIVERABLES:
 1. <specific action>
 2. <specific action>
 
-OUTPUT: .claude/missions/<name>/<output-file>.md
+OUTPUT: .claude/workflows/<name>/<output-file>.md
 
 MCP PROTOCOL:
-1. start_task({mission_id: "<id>", phase: 1, caller_type: "subagent", agent_name: "<name>", name: "<task>", goal: "<goal>"})
+1. start_task({workflow_id: "<id>", phase: 1, caller_type: "subagent", agent_name: "<name>", name: "<task>", goal: "<goal>"})
 2. [During work] log_decision/log_milestone as needed
 3. complete_task({task_id: "<id>", status: "success", outcome: {summary: "..."}, phase_complete: true})
 ```
@@ -93,7 +93,7 @@ phase:
 
 **Agent Prompt:**
 ```
-MISSION_ID: <mission_id>
+WORKFLOW_ID: <workflow_id>
 PHASE: 2
 ...
 ```
@@ -146,7 +146,7 @@ Sub-agents can query previous phase context:
 
 ```
 get_context({
-  mission_id: "<mission_id>",
+  workflow_id: "<workflow_id>",
   include: ["decisions", "milestones"],
   filter: { phase: 1 }
 })
