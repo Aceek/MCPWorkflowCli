@@ -2,6 +2,7 @@
 
 <instructions>
 For workflow-specific agents in /project/.claude/workflows/<name>/agents/
+IMPORTANT: Subagents CANNOT call MCP tools - they return structured output instead.
 Delete this block after filling.
 </instructions>
 
@@ -9,7 +10,7 @@ Delete this block after filling.
 ---
 name: <agent-name>
 description: <When orchestrator should invoke this agent - be specific>
-tools: Read, Write, Grep, Glob  # Minimal set needed
+tools: Read, Write, Grep, Glob  # Minimal set needed (NO MCP tools)
 model: sonnet  # sonnet|opus|haiku
 ---
 ```
@@ -19,9 +20,9 @@ model: sonnet  # sonnet|opus|haiku
 <One sentence: what you are and your expertise>
 
 # Workflow Context
-Read: `.claude/workflows/<name>/workflow.md`
-Workflow ID: `<workflow_id>`
-Phase: <phase_number>
+**Workflow**: <workflow_name>
+**Phase**: <phase_number>
+**Task ID**: <task_id> (provided by orchestrator)
 
 # Your Task
 <Specific task for this agent within the workflow>
@@ -36,61 +37,46 @@ Phase: <phase_number>
 - <Scope limits>
 - <Quality requirements>
 
-# MCP Protocol
-
-## At Start
-```
-start_task({
-  workflow_id: "<workflow_id>",
-  phase: <phase_number>,
-  caller_type: "subagent",
-  agent_name: "<agent-name>",
-  name: "<task_name>",
-  goal: "<task_goal>",
-  areas: ["<affected_paths>"]
-})
-```
-Store the returned `task_id`.
-
-## During Execution
-- `log_decision`: For architectural choices
-- `log_milestone`: For progress updates (include % if known)
-- `log_issue`: For blockers (set requiresHumanReview: true if blocked)
-
-## Read Previous Context (if needed)
-```
-get_context({
-  workflow_id: "<workflow_id>",
-  include: ["decisions"],
-  filter: { phase: <previous_phase> }
-})
-```
-
-## At End
-```
-complete_task({
-  task_id: "<task_id>",
-  status: "success" | "partial_success" | "failed",
-  outcome: {
-    summary: "<what_was_accomplished>",
-    achievements: ["<achievement_1>"],
-    limitations: ["<limitation_1>"]
-  },
-  phase_complete: true  // Set true only if last task of phase
-})
-```
-
 # Execution Steps
-1. Call start_task → get task_id
-2. [Optional] Query previous phase context via get_context
+1. <Step 1>
+2. <Step 2>
 3. <Step 3>
-4. <Step 4>
-5. Log decisions and progress as appropriate
-6. Call complete_task with outcome summary
-7. Return summary to orchestrator
+4. Return structured output (see format below)
 
-# Output Format
-<Specify exact format for return summary>
+# Output Format (REQUIRED)
+
+You MUST return this structured format. The orchestrator will parse it and log to MCP.
+
+---
+STATUS: success | partial | failed
+
+SUMMARY:
+<What you accomplished in 2-3 sentences>
+
+ACHIEVEMENTS:
+- <Achievement 1>
+- <Achievement 2>
+
+DECISIONS:
+- Category: architecture | library | approach | scope
+  Question: <What was the decision about?>
+  Chosen: <What was chosen>
+  Reasoning: <Why, 1-2 sentences>
+
+ISSUES:
+- Type: blocker | bug | dependency | unclear_requirement
+  Description: <What's the issue>
+  RequiresHuman: true | false
+
+PROGRESS: <0-100>
+
+FILES_MODIFIED:
+- <path/to/file1.ts>
+- <path/to/file2.ts>
+
+NEXT_STEPS:
+- <What should happen next>
+---
 ```
 
 ## Agent Design Principles
@@ -99,16 +85,30 @@ complete_task({
 |-----------|----------------|
 | Single responsibility | One clear task per agent |
 | Minimal tools | Only tools needed for task |
-| MCP-aware | Use MCP tools for state tracking |
+| **NO MCP calls** | Return structured output instead |
 | Scope-bound | Never exceed defined scope |
-| Failure-explicit | Use log_issue for blockers |
+| Failure-explicit | Use ISSUES section for blockers |
 
 ## Common Agent Types
 
-| Type | Purpose | Typical Tools | MCP Focus |
-|------|---------|---------------|-----------|
-| Analyzer | Understand code/docs | Read, Grep, Glob | log_decision |
-| Implementer | Write/modify code | Read, Write, Edit, Bash | log_milestone |
-| Reviewer | Validate quality | Read, Grep, Bash (tests) | log_issue |
-| Documenter | Update docs | Read, Write | log_milestone |
-| Tester | Run/write tests | Read, Write, Bash | log_issue |
+| Type | Purpose | Typical Tools | Output Focus |
+|------|---------|---------------|--------------|
+| Analyzer | Understand code/docs | Read, Grep, Glob | DECISIONS |
+| Implementer | Write/modify code | Read, Write, Edit, Bash | FILES_MODIFIED |
+| Reviewer | Validate quality | Read, Grep, Bash (tests) | ISSUES |
+| Documenter | Update docs | Read, Write | FILES_MODIFIED |
+| Tester | Run/write tests | Read, Write, Bash | ISSUES |
+
+## MCP Note
+
+**Subagents CANNOT call MCP tools** (known Claude Code limitation).
+
+Instead:
+1. Orchestrator calls `start_task()` and gets `task_id`
+2. Orchestrator passes `task_id` to subagent in prompt
+3. Subagent does work and returns structured output
+4. Orchestrator parses output and calls:
+   - `log_decision()` for each DECISION
+   - `log_issue()` for each ISSUE
+   - `log_milestone()` for PROGRESS
+   - `complete_task()` with SUMMARY/ACHIEVEMENTS

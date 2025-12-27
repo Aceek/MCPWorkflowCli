@@ -2,12 +2,21 @@
 
 MCP-based orchestration for multi-agent workflows.
 
+## MCP Ownership (CRITICAL)
+
+**Subagents CANNOT call MCP tools** (known Claude Code limitation).
+
+| Caller | MCP Access | Tools Used |
+|--------|------------|------------|
+| Orchestrator | ✅ Full | `start_task`, `complete_task`, `log_*`, `get_context` |
+| Subagent | ❌ None | Standard tools only (Read, Write, Grep, etc.) |
+
 ## Quick Reference
 
-| Caller | Required Tools | Optional Tools |
-|--------|----------------|----------------|
-| Orchestrator | `start_task`, `complete_task`, `complete_workflow` | `get_context` |
-| Sub-agent | `start_task`, `complete_task` | `get_context`, `log_decision`, `log_milestone`, `log_issue` |
+| Caller | Responsibility |
+|--------|----------------|
+| Orchestrator | ALL MCP calls + parse subagent output |
+| Sub-agent | Do work + return structured output |
 
 ## Orchestrator Protocol
 
@@ -17,15 +26,19 @@ Read .claude/workflows/<name>/definition.md  → workflow_id, objectives
 Read .claude/workflows/<name>/workflow.md    → phases, agents
 ```
 
-### 2. Phase Loop
+### 2. Phase Loop (Hybrid Pattern)
 ```
 FOR each phase:
-  1. start_task({caller_type: "orchestrator", phase: N, ...})
-  2. Launch sub-agent via Task tool
-  3. Wait for completion
-  4. complete_task({phase_complete: true})
-  5. get_context({include: ["blockers"]})
-  6. IF blockers → STOP, request human help
+  1. start_task({caller_type: "orchestrator", name: "Phase N", ...}) → task_id
+  2. Launch sub-agent via Task tool (pass task_id in prompt)
+  3. Receive structured output from subagent
+  4. Parse output and call MCP:
+     - FOR each decision → log_decision({task_id, ...})
+     - FOR each issue → log_issue({task_id, ...})
+     - log_milestone({task_id, progress, message})
+  5. complete_task({task_id, status, outcome, phase_complete: true})
+  6. get_context({include: ["blockers"]})
+  7. IF blockers → STOP, request human help
 ```
 
 ### 3. Completion
@@ -38,21 +51,87 @@ complete_workflow({
 
 ## Sub-Agent Protocol
 
-### Minimal (2 calls)
-```
-start_task({...}) → task_id
-[work]
-complete_task({task_id, status, outcome, phase_complete: true})
+### Output Format (REQUIRED)
+
+Subagents MUST return structured output for orchestrator to parse:
+
+```yaml
+# Subagent returns this structure
+output:
+  status: "success" | "partial" | "failed"
+  summary: "What was accomplished (2-3 sentences)"
+
+  achievements:          # Optional
+    - "Achievement 1"
+    - "Achievement 2"
+
+  decisions:             # Optional - orchestrator will log_decision()
+    - category: "architecture" | "library" | "approach" | "scope"
+      question: "What was the decision about?"
+      chosen: "What was chosen"
+      reasoning: "Why (1-2 sentences)"
+
+  issues:                # Optional - orchestrator will log_issue()
+    - type: "blocker" | "bug" | "dependency" | "unclear_requirement"
+      description: "What's the issue"
+      requires_human: true | false
+
+  progress: 75           # Optional, 0-100
+
+  files_modified:        # Optional
+    - "path/to/file.ts"
+
+  next_steps:            # Optional
+    - "What should happen next"
 ```
 
-### Standard (3-5 calls)
-```
-start_task({...}) → task_id
-get_context({include: ["decisions"], filter: {phase: N-1}})
-[work]
-  log_decision({...}) // key choices
-  log_milestone({...}) // progress
-complete_task({...})
+### Subagent Prompt Template
+
+```markdown
+# Task: {task_name}
+
+**Workflow**: {workflow_name}
+**Phase**: {phase_number}
+**Task ID**: {task_id}
+
+## Your Goal
+{task_goal}
+
+## Scope
+{scope_paths}
+
+## Instructions
+1. {instruction_1}
+2. {instruction_2}
+3. {instruction_3}
+
+## Output Format (REQUIRED)
+
+Return a structured result that the orchestrator will parse:
+
+STATUS: success | partial | failed
+SUMMARY: What you accomplished (2-3 sentences)
+
+ACHIEVEMENTS:
+- Achievement 1
+- Achievement 2
+
+DECISIONS: (if any architectural choices were made)
+- Category: architecture | library | approach | scope
+  Question: What was decided?
+  Chosen: What option was selected
+  Reasoning: Why this choice
+
+ISSUES: (if any blockers encountered)
+- Type: blocker | bug | dependency | unclear_requirement
+  Description: What's the issue
+  RequiresHuman: true | false
+
+PROGRESS: 0-100 (estimated completion)
+
+FILES_MODIFIED:
+- path/to/file1.ts
+- path/to/file2.ts
 ```
 
 ## MCP Tool Schemas
@@ -62,15 +141,13 @@ complete_task({...})
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `workflow_id` | string | yes | Workflow identifier |
-| `phase` | number | yes | Phase number (auto-creates) |
-| `phase_name` | string | no | Name for auto-created phase |
 | `caller_type` | string | yes | `orchestrator` or `subagent` |
-| `agent_name` | string | subagent | Agent identifier |
+| `agent_name` | string | no | Agent identifier (for tracking) |
 | `name` | string | yes | Task name |
 | `goal` | string | yes | Task goal |
 | `areas` | string[] | no | Code paths affected |
 
-**Returns**: `{ task_id, phase_id, snapshot_id, started_at }`
+**Returns**: `{ task_id, started_at }`
 
 ### complete_task
 
@@ -82,7 +159,6 @@ complete_task({...})
 | `outcome.achievements` | string[] | no |
 | `outcome.limitations` | string[] | no |
 | `outcome.next_steps` | string[] | no |
-| `phase_complete` | bool | no | Mark phase done |
 
 **Returns**: `{ task_id, duration_seconds, files_changed }`
 
@@ -91,8 +167,7 @@ complete_task({...})
 | Field | Type | Required |
 |-------|------|----------|
 | `workflow_id` | string | yes |
-| `include` | string[] | yes | `decisions`, `milestones`, `blockers`, `phase_summary`, `tasks` |
-| `filter.phase` | number | no |
+| `include` | string[] | yes | `decisions`, `milestones`, `blockers`, `tasks` |
 | `filter.agent` | string | no |
 
 ### log_decision
@@ -120,8 +195,7 @@ complete_task({...})
 | `task_id` | string | yes |
 | `type` | enum | yes | `blocker`, `bug`, `dependency`, `unclear_requirement` |
 | `description` | string | yes |
-| `severity` | string | no | `high`, `medium`, `low` |
-| `requiresHumanReview` | bool | no | Creates blocker |
+| `requires_human_review` | bool | no | Creates blocker |
 
 ### complete_workflow
 
@@ -133,53 +207,53 @@ complete_task({...})
 | `achievements` | string[] | no |
 | `limitations` | string[] | no |
 
-## Prompt Templates
+## Orchestrator Parsing Example
 
-### Sub-Agent (Minimal)
-```markdown
-## MCP
-Workflow: `{workflow_id}` | Phase: {N} | Agent: {name}
+```python
+# Orchestrator receives subagent output, then:
 
-START: `start_task({workflow_id, phase: {N}, caller_type: "subagent", agent_name: "{name}", name: "...", goal: "..."})`
-END: `complete_task({task_id, status: "success", outcome: {summary: "..."}, phase_complete: true})`
-```
+# 1. Parse decisions and log them
+for decision in subagent_output.decisions:
+    log_decision({
+        task_id: task_id,
+        category: decision.category,
+        question: decision.question,
+        chosen: decision.chosen,
+        reasoning: decision.reasoning
+    })
 
-### Sub-Agent (Full)
-```markdown
-## MCP Integration
+# 2. Parse issues and log them
+for issue in subagent_output.issues:
+    log_issue({
+        task_id: task_id,
+        type: issue.type,
+        description: issue.description,
+        requires_human_review: issue.requires_human
+    })
 
-**Context**: Workflow `{workflow_id}`, Phase {N}, Agent: {agent_name}
-
-### At Start
-start_task({
-  workflow_id: "{workflow_id}",
-  phase: {N},
-  caller_type: "subagent",
-  agent_name: "{agent_name}",
-  name: "{task_name}",
-  goal: "{task_goal}",
-  areas: ["{paths}"]
+# 3. Log progress
+log_milestone({
+    task_id: task_id,
+    message: subagent_output.summary,
+    progress: subagent_output.progress
 })
 
-### During Work
-- log_decision({task_id, category, question, chosen, reasoning})
-- log_milestone({task_id, message, progress})
-- log_issue({task_id, type, description, requiresHumanReview: true}) // if blocked
-
-### At End
+# 4. Complete task
 complete_task({
-  task_id: "{task_id}",
-  status: "success",
-  outcome: { summary: "...", achievements: [...] },
-  phase_complete: true
+    task_id: task_id,
+    status: subagent_output.status,
+    outcome: {
+        summary: subagent_output.summary,
+        achievements: subagent_output.achievements
+    }
 })
 ```
 
 ## Error Handling
 
 ### Blocker Detection
-1. Sub-agent calls `log_issue` with `requiresHumanReview: true`
-2. Sub-agent returns error summary to orchestrator
+1. Subagent returns `issues` with `requires_human: true`
+2. Orchestrator calls `log_issue({requiresHumanReview: true})`
 3. Orchestrator detects via `get_context({include: ["blockers"]})`
 4. Orchestrator STOPS and requests human intervention
 
@@ -187,18 +261,17 @@ complete_task({
 ```
 complete_task({
   task_id, status: "failed",
-  outcome: { summary: "Failed because...", limitations: [...] },
-  phase_complete: true
+  outcome: { summary: "Failed because...", limitations: [...] }
 })
 ```
 Then: Retry, Skip (if non-critical), or Abort workflow.
 
 ## MCP Call Budgets
 
-| Complexity | Calls | Pattern |
-|------------|-------|---------|
-| Simple | 2 | start + complete |
-| Standard | 3-4 | + get_context, 1 log |
-| Complex | 5-8 | + multiple logs |
+| Complexity | Orchestrator Calls | Pattern |
+|------------|-------------------|---------|
+| Simple | 2-3 | start + complete |
+| Standard | 4-6 | + get_context, 1-2 logs |
+| Complex | 6-10 | + multiple logs per decision/issue |
 
-**Avoid**: >8 calls/task, trivial decisions, <10% progress updates.
+**Note**: Subagents make 0 MCP calls - all logging done by orchestrator.

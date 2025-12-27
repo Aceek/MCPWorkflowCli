@@ -77,3 +77,9 @@ Response contains:
 ```
 
 Store `workflow_id` in this file and in workflow.md.
+
+## MCP Ownership Note
+
+**Subagents CANNOT call MCP tools** (known Claude Code limitation).
+
+All MCP calls are handled by the orchestrator. Subagents return structured output that the orchestrator parses and logs via MCP.

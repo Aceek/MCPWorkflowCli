@@ -23,6 +23,15 @@ Multi-agent workflow orchestration via MCP tools.
 
 ## Core Concepts
 
+### MCP Ownership (CRITICAL)
+
+**Subagents CANNOT call MCP tools** (known Claude Code limitation).
+
+| Caller | MCP Access | Responsibility |
+|--------|------------|----------------|
+| Orchestrator | ✅ Full | ALL MCP calls |
+| Subagent | ❌ None | Work + return structured output |
+
 ### State Management
 All state via MCP tools (no file-based memory):
 
@@ -38,15 +47,35 @@ All state via MCP tools (no file-based memory):
 ### Orchestrator
 - Reads definition.md + workflow.md at start
 - Executes phases sequentially (or parallel)
+- **Handles ALL MCP calls** (subagents cannot)
 - Launches sub-agents via Task tool
-- Tracks progress via MCP
+- Parses subagent output and calls MCP accordingly
 - NEVER delegates orchestration
 
 ### Sub-Agents
 - Isolated context per agent
-- Return summary to orchestrator
-- Use MCP for state tracking
-- Query previous decisions via `get_context`
+- **NO MCP access** - return structured output instead
+- Orchestrator parses output and logs to MCP
+- Focus on actual work (analysis, implementation, review)
+
+### Hybrid Pattern
+
+```
+Orchestrator                          Subagent
+     │                                    │
+     ├── start_task() ────────────────────┤
+     │        ↓ task_id                   │
+     ├── Task tool (prompt + task_id) ───>│
+     │                                    ├── [does work]
+     │                                    ├── [writes files]
+     │<── structured result ──────────────┤
+     │                                    │
+     ├── parse result                     │
+     ├── log_decision() (for each)        │
+     ├── log_milestone()                  │
+     ├── log_issue() (if blockers)        │
+     └── complete_task()                  │
+```
 
 ### subagent_type Rules
 
@@ -61,9 +90,11 @@ All state via MCP tools (no file-based memory):
 1. Read definition.md, workflow.md
 2. FOR each phase:
    a. start_task (orchestrator)
-   b. Launch sub-agent(s)
-   c. complete_task (phase_complete: true)
-   d. Check blockers
+   b. Launch sub-agent(s) via Task tool
+   c. Receive structured output from subagent
+   d. Parse output → call log_decision/log_milestone/log_issue
+   e. complete_task (phase_complete: true)
+   f. Check blockers via get_context
 3. IF blocker → STOP
 4. complete_workflow
 ```
@@ -79,7 +110,7 @@ parallel: false  # Sequential (default)
 |-----------|--------|
 | >5 phases | /clear between major phases |
 | After /clear | Re-read definition.md |
-| Sub-agent needs context | get_context with phase filter |
+| Need previous context | get_context with phase filter |
 
 ## workflow.md Schema
 
@@ -95,7 +126,7 @@ phases:
         scope: what this agent handles
     parallel: false
     outputs:
-      - log_decision: key choices
+      - report.md
     completion: all agents success
 
   - id: phase-2
@@ -111,6 +142,7 @@ phases:
 - No overlapping scopes in parallel
 - File-writing agents = `general-purpose`
 - All phases need `number` field
+- Subagent prompts must NOT include MCP calls
 
 ## CLAUDE.md Integration
 
