@@ -1,4 +1,4 @@
-# Mission System Architecture
+# Workflow System Architecture
 
 Multi-agent workflow orchestration via MCP tools.
 
@@ -6,18 +6,17 @@ Multi-agent workflow orchestration via MCP tools.
 
 ```
 ~/.claude/
-├── docs/mission-system/     # This documentation
+├── docs/workflow-system/     # This documentation
 │   ├── architecture.md
 │   ├── usage.md
-│   ├── profiles/
 │   └── templates/
 └── agents/
-    └── mission-architect.md
+    └── workflow-architect.md
 
 /project/.claude/
-├── CLAUDE.md                # Updated with active mission
-└── missions/<name>/
-    ├── mission.md           # Objectives + mission_id
+├── CLAUDE.md                # Updated with active workflow
+└── workflows/<name>/
+    ├── definition.md        # Objectives + workflow_id
     ├── workflow.md          # Phases + agents
     └── start.md             # Executable prompt
 ```
@@ -29,7 +28,7 @@ All state via MCP tools (no file-based memory):
 
 | State | Tool |
 |-------|------|
-| Mission lifecycle | `start_mission`, `complete_mission` |
+| Workflow lifecycle | `start_workflow`, `complete_workflow` |
 | Task lifecycle | `start_task`, `complete_task` |
 | Decisions | `log_decision` |
 | Progress | `log_milestone` |
@@ -37,7 +36,7 @@ All state via MCP tools (no file-based memory):
 | Query | `get_context` |
 
 ### Orchestrator
-- Reads mission.md + workflow.md at start
+- Reads definition.md + workflow.md at start
 - Executes phases sequentially (or parallel)
 - Launches sub-agents via Task tool
 - Tracks progress via MCP
@@ -59,14 +58,14 @@ All state via MCP tools (no file-based memory):
 ## Execution Flow
 
 ```
-1. Read mission.md, workflow.md
+1. Read definition.md, workflow.md
 2. FOR each phase:
    a. start_task (orchestrator)
    b. Launch sub-agent(s)
    c. complete_task (phase_complete: true)
    d. Check blockers
 3. IF blocker → STOP
-4. complete_mission
+4. complete_workflow
 ```
 
 ### Parallel Execution
@@ -79,7 +78,7 @@ parallel: false  # Sequential (default)
 | Condition | Action |
 |-----------|--------|
 | >5 phases | /clear between major phases |
-| After /clear | Re-read mission.md |
+| After /clear | Re-read definition.md |
 | Sub-agent needs context | get_context with phase filter |
 
 ## workflow.md Schema
@@ -115,16 +114,16 @@ phases:
 
 ## CLAUDE.md Integration
 
-Mission-architect adds to project CLAUDE.md:
+Workflow-architect adds to project CLAUDE.md:
 
 ```markdown
-## Active Mission
-Mission: <name>
-ID: `<mission_id>`
-Path: .claude/missions/<name>/
+## Active Workflow
+Workflow: <name>
+ID: `<workflow_id>`
+Path: .claude/workflows/<name>/
 
 Commands:
-- "continue mission" → Resume
-- "mission status" → Query
-- "abort mission" → Fail
+- "continue workflow" → Resume
+- "workflow status" → Query
+- "abort workflow" → Fail
 ```
