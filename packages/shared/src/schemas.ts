@@ -17,7 +17,7 @@ import {
   DecisionCategory,
   IssueType,
   TestsStatus,
-} from './index.js'
+} from './enums.js'
 
 // ============================================
 // ENUM SCHEMAS (derived from enum objects using z.nativeEnum)
