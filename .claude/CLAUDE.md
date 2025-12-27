@@ -26,22 +26,26 @@ DIFF 2: git diff HEAD --name-status               # Working tree
 UNION = Absolute truth of agent work
 ```
 
-### Caller Context
+### Phase Management
 ```typescript
-// Orchestrator
-start_task({ caller_type: 'orchestrator', phase: 1, ... })
+// Orchestrator creates phases
+start_phase({ workflow_id, number: 1, name: "Design", is_parallel: true }) → phase_id
 
-// Sub-agent
-start_task({ caller_type: 'subagent', agent_name: 'feature-implementer', ... })
+// Subagent uses phase_id
+start_task({ workflow_id, phase_id, caller_type: 'subagent', agent_name: '...' })
+
+// Orchestrator completes phases
+complete_phase({ phase_id, status: 'completed' })
 ```
 
-## MCP Tools (8)
+## MCP Tools (10)
 
-| Category | Tools |
-|----------|-------|
-| Workflow | `start_workflow`, `complete_workflow`, `get_context` |
-| Task | `start_task`, `complete_task` |
-| Logging | `log_decision`, `log_issue`, `log_milestone` |
+| Category | Tools | Caller |
+|----------|-------|--------|
+| Workflow | `start_workflow`, `complete_workflow`, `get_context` | Orchestrator |
+| Phase | `start_phase`, `complete_phase` | Orchestrator |
+| Task | `start_task`, `complete_task` | Subagent |
+| Logging | `log_decision`, `log_issue`, `log_milestone` | Subagent |
 
 **Budget**: 3-6 MCP calls per task (no context flooding)
 
@@ -100,7 +104,10 @@ When user wants to RUN an existing workflow:
 1. **FIRST**: Verify `.claude/workflows/<name>/` exists
 2. Read `start.md` for orchestrator protocol
 3. Call `start_workflow` MCP if not already started
-4. Execute phases per workflow.md
+4. Execute phases per workflow.md:
+   - `start_phase()` before launching subagents
+   - Pass `phase_id` to subagents
+   - `complete_phase()` after all tasks done
 
 **Trigger phrases**: "run", "execute", "start", "launch", "begin"
 
@@ -126,4 +133,4 @@ If folder does NOT exist → invoke `workflow-architect` agent first.
 
 | Workflow | Path | Description |
 |----------|------|-------------|
-| `code-quality-review` | `.claude/workflows/code-quality-review/` | Analyze and fix code quality issues across all packages (SOLID, DRY, security, clean code) |
+| Greeting Cards Generator | `.claude/workflows/greeting-cards/` | Modular greeting card system with 3 themed templates (birthday, holiday, congrats) |

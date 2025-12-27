@@ -1,0 +1,21 @@
+Create a workflow for building a modular greeting card generator system.
+
+The system should have 3 themed card templates:
+- Birthday cards
+- Holiday cards (generic, inclusive of all celebrations)
+- Congratulations cards (graduations, promotions, achievements)
+
+Each card template needs:
+1. A design specification (color palette, tone guidelines, key phrases)
+2. A markdown template with placeholders
+3. Quality review to ensure consistency
+
+Structure the workflow in 3 phases:
+- Phase 1: Design Specification (3 parallel agents - one per theme)
+- Phase 2: Template Implementation (3 parallel agents - one per theme)
+- Phase 3: Quality Review (1 agent reviewing all templates)
+
+Output files should go in greeting-cards/ with subfolders:
+- greeting-cards/specs/ for design specifications
+- greeting-cards/templates/ for card templates
+- greeting-cards/review/ for final quality report

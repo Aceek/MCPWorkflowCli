@@ -16,8 +16,17 @@ async function getWorkflow(id: string) {
         include: {
           tasks: {
             include: {
-              _count: {
-                select: {
+              decisions: {
+                orderBy: { createdAt: 'asc' },
+              },
+              issues: {
+                orderBy: { createdAt: 'asc' },
+              },
+              milestones: {
+                orderBy: { createdAt: 'asc' },
+              },
+              subtasks: {
+                include: {
                   decisions: true,
                   issues: true,
                   milestones: true,
