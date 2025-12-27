@@ -1,4 +1,4 @@
-# Mission System Usage
+# Workflow System Usage
 
 MCP-based orchestration for multi-agent workflows.
 
@@ -6,15 +6,15 @@ MCP-based orchestration for multi-agent workflows.
 
 | Caller | Required Tools | Optional Tools |
 |--------|----------------|----------------|
-| Orchestrator | `start_task`, `complete_task`, `complete_mission` | `get_context` |
+| Orchestrator | `start_task`, `complete_task`, `complete_workflow` | `get_context` |
 | Sub-agent | `start_task`, `complete_task` | `get_context`, `log_decision`, `log_milestone`, `log_issue` |
 
 ## Orchestrator Protocol
 
 ### 1. Setup
 ```
-Read .claude/missions/<name>/mission.md  → mission_id, objectives
-Read .claude/missions/<name>/workflow.md → phases, agents
+Read .claude/workflows/<name>/definition.md  → workflow_id, objectives
+Read .claude/workflows/<name>/workflow.md    → phases, agents
 ```
 
 ### 2. Phase Loop
@@ -30,8 +30,8 @@ FOR each phase:
 
 ### 3. Completion
 ```
-complete_mission({
-  mission_id, status: "completed",
+complete_workflow({
+  workflow_id, status: "completed",
   summary: "...", achievements: [...]
 })
 ```
@@ -61,7 +61,7 @@ complete_task({...})
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `mission_id` | string | yes | Mission identifier |
+| `workflow_id` | string | yes | Workflow identifier |
 | `phase` | number | yes | Phase number (auto-creates) |
 | `phase_name` | string | no | Name for auto-created phase |
 | `caller_type` | string | yes | `orchestrator` or `subagent` |
@@ -90,7 +90,7 @@ complete_task({...})
 
 | Field | Type | Required |
 |-------|------|----------|
-| `mission_id` | string | yes |
+| `workflow_id` | string | yes |
 | `include` | string[] | yes | `decisions`, `milestones`, `blockers`, `phase_summary`, `tasks` |
 | `filter.phase` | number | no |
 | `filter.agent` | string | no |
@@ -123,11 +123,11 @@ complete_task({...})
 | `severity` | string | no | `high`, `medium`, `low` |
 | `requiresHumanReview` | bool | no | Creates blocker |
 
-### complete_mission
+### complete_workflow
 
 | Field | Type | Required |
 |-------|------|----------|
-| `mission_id` | string | yes |
+| `workflow_id` | string | yes |
 | `status` | enum | yes | `completed`, `failed`, `partial` |
 | `summary` | string | yes |
 | `achievements` | string[] | no |
@@ -138,9 +138,9 @@ complete_task({...})
 ### Sub-Agent (Minimal)
 ```markdown
 ## MCP
-Mission: `{mission_id}` | Phase: {N} | Agent: {name}
+Workflow: `{workflow_id}` | Phase: {N} | Agent: {name}
 
-START: `start_task({mission_id, phase: {N}, caller_type: "subagent", agent_name: "{name}", name: "...", goal: "..."})`
+START: `start_task({workflow_id, phase: {N}, caller_type: "subagent", agent_name: "{name}", name: "...", goal: "..."})`
 END: `complete_task({task_id, status: "success", outcome: {summary: "..."}, phase_complete: true})`
 ```
 
@@ -148,11 +148,11 @@ END: `complete_task({task_id, status: "success", outcome: {summary: "..."}, phas
 ```markdown
 ## MCP Integration
 
-**Context**: Mission `{mission_id}`, Phase {N}, Agent: {agent_name}
+**Context**: Workflow `{workflow_id}`, Phase {N}, Agent: {agent_name}
 
 ### At Start
 start_task({
-  mission_id: "{mission_id}",
+  workflow_id: "{workflow_id}",
   phase: {N},
   caller_type: "subagent",
   agent_name: "{agent_name}",
@@ -191,7 +191,7 @@ complete_task({
   phase_complete: true
 })
 ```
-Then: Retry, Skip (if non-critical), or Abort mission.
+Then: Retry, Skip (if non-critical), or Abort workflow.
 
 ## MCP Call Budgets
 
