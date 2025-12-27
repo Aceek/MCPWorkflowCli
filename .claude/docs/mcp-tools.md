@@ -1,52 +1,52 @@
 # MCP Tools
 
-8 tools for mission orchestration and workflow tracking.
+8 tools for workflow orchestration and tracking.
 
 ## Overview
 
 | Tool | Purpose | Frequency |
 |------|---------|-----------|
-| `start_mission` | Create mission with profile | 1x/mission |
-| `complete_mission` | Finalize with summary + metrics | 1x/mission |
-| `get_context` | Query state (decisions, blockers) | 0-N/mission |
+| `start_workflow` | Create workflow with profile | 1x/workflow |
+| `complete_workflow` | Finalize with summary + metrics | 1x/workflow |
+| `get_context` | Query state (decisions, blockers) | 0-N/workflow |
 | `start_task` | Start task + Git snapshot | 1x/task |
 | `complete_task` | Complete task + Git diff | 1x/task |
 | `log_decision` | Architectural decision | 0-3/task |
 | `log_issue` | Problem/blocker | 0-3/task |
 | `log_milestone` | Progress update | 0-5/task |
 
-## Mission Tools
+## Workflow Tools
 
-### start_mission
+### start_workflow
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `name` | string | yes | Short mission name |
+| `name` | string | yes | Short workflow name |
 | `objective` | string | yes | Measurable goal |
 | `profile` | enum | no | `simple`\|`standard`\|`complex` |
 | `total_phases` | number | no | Expected phases count |
 | `scope` | string | no | Included/excluded |
 | `constraints` | string | no | Technical limits |
 
-**Returns**: `{ mission_id, profile, total_phases, created_at }`
+**Returns**: `{ workflow_id, profile, total_phases, created_at }`
 
-### complete_mission
+### complete_workflow
 
 | Field | Type | Required |
 |-------|------|----------|
-| `mission_id` | string | yes |
+| `workflow_id` | string | yes |
 | `status` | enum | yes | `completed`\|`failed`\|`partial` |
 | `summary` | string | yes |
 | `achievements` | string[] | no |
 | `limitations` | string[] | no |
 
-**Returns**: `{ mission_id, status, metrics: { total_phases, total_tasks, duration, files_changed } }`
+**Returns**: `{ workflow_id, status, metrics: { total_phases, total_tasks, duration, files_changed } }`
 
 ### get_context
 
 | Field | Type | Required |
 |-------|------|----------|
-| `mission_id` | string | yes |
+| `workflow_id` | string | yes |
 | `include` | string[] | yes | `decisions`\|`milestones`\|`blockers`\|`phase_summary`\|`tasks` |
 | `filter.phase` | number | no |
 | `filter.agent` | string | no |
@@ -59,8 +59,7 @@
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `mission_id` | string | no* | For mission mode |
-| `workflow_id` | string | no* | For legacy mode |
+| `workflow_id` | string | yes | Workflow ID |
 | `phase` | number | no | Phase number (auto-creates) |
 | `phase_name` | string | no | Name for auto-created phase |
 | `caller_type` | enum | no | `orchestrator`\|`subagent` |
@@ -135,8 +134,8 @@
 
 | Event | Trigger |
 |-------|---------|
-| `mission:created` | start_mission |
-| `mission:updated` | complete_mission, phase changes |
+| `workflow:created` | start_workflow |
+| `workflow:updated` | complete_workflow, phase changes |
 | `phase:created` | First task of phase |
 | `phase:updated` | complete_task with phase_complete |
 | `task:created` | start_task |
@@ -145,7 +144,8 @@
 ## Enums (Prisma)
 
 ```typescript
-enum MissionStatus { PENDING, IN_PROGRESS, COMPLETED, FAILED, BLOCKED }
+enum WorkflowStatus { PENDING, IN_PROGRESS, COMPLETED, FAILED, BLOCKED }
+enum WorkflowProfile { SIMPLE, STANDARD, COMPLEX }
 enum PhaseStatus { PENDING, IN_PROGRESS, COMPLETED, FAILED }
 enum TaskStatus { IN_PROGRESS, SUCCESS, PARTIAL_SUCCESS, FAILED }
 enum CallerType { ORCHESTRATOR, SUBAGENT }

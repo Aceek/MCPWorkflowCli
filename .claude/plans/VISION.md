@@ -1,12 +1,20 @@
-# Mission Control - Vision & Architecture
+# [SUPERSEDED] Mission Control - Vision & Architecture
+
+> **Note**: This document has been superseded by the unified Workflow model.
+> The Mission and Workflow models have been unified into a single Workflow model.
+> See `.claude/docs/architecture.md` and `.claude/docs/database.md` for current documentation.
+
+---
+
+## HISTORICAL CONTEXT (Archived)
 
 ## Project Identity
 
-**Name**: `mission-control`
+**Name**: `workflow-control`
 **Tagline**: Orchestration + Observability for Agentic Workflows
 
 **What it is**: A unified system that:
-1. **Orchestrates** multi-agent missions (phases, sub-agents, coordination)
+1. **Orchestrates** multi-agent workflows (phases, sub-agents, coordination)
 2. **Tracks** everything via MCP tools + SQLite (decisions, progress, files)
 3. **Visualizes** workflows in real-time (WebUI dashboard)
 

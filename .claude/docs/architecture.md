@@ -3,7 +3,7 @@
 ## Project Structure
 
 ```
-mission-control/
+workflow-control/
 ├── packages/
 │   ├── shared/          # Prisma schema + types (source of truth)
 │   │   ├── prisma/
@@ -15,26 +15,25 @@ mission-control/
 │   │   └── src/
 │   │       ├── index.ts       # Entry (stdio)
 │   │       ├── db.ts          # Prisma singleton
-│   │       ├── tools/         # 9 MCP tools
+│   │       ├── tools/         # 8 MCP tools
 │   │       ├── websocket/     # Real-time events
 │   │       └── utils/
 │   │
 │   └── web-ui/          # Next.js Dashboard
 │       └── src/
 │           ├── app/
-│           │   ├── missions/  # Missions views
-│           │   └── workflow/  # Legacy views
+│           │   └── workflows/  # Workflow views
 │           ├── components/
 │           └── lib/
 │
-├── mission-system/      # User docs (→ ~/.claude/)
+├── workflow-system/     # User docs (-> ~/.claude/)
 └── scripts/             # Setup scripts
 ```
 
 ## Data Model
 
 ```
-Mission (objective, profile)
+Workflow (objective, profile)
 ├── Phase 1 (auto-created)
 │   ├── Task 1.1 (orchestrator)
 │   └── Task 1.2 (subagent: feature-implementer)
@@ -42,20 +41,19 @@ Mission (objective, profile)
 │   └── Task 2.1
 └── ...
 
-Workflow (legacy)
-└── Task
-    ├── Decision
-    ├── Issue
-    └── Milestone
+Task
+├── Decision
+├── Issue
+└── Milestone
 ```
 
 ## MCP Protocol
 
 ```
-Claude Code → MCP Client
-                 ↓ stdio (JSON-RPC)
-             MCP Server → SQLite
-                 ↓ WebSocket
+Claude Code -> MCP Client
+                 | stdio (JSON-RPC)
+             MCP Server -> SQLite
+                 | WebSocket
              Web UI (real-time)
 ```
 
@@ -105,8 +103,8 @@ const allChanges = merge(committed, working) // Absolute truth
 
 ```typescript
 // All MCP inputs validated before logic
-const validated = startMissionSchema.parse(args)
-const mission = await prisma.mission.create({ data: validated })
+const validated = startWorkflowSchema.parse(args)
+const workflow = await prisma.workflow.create({ data: validated })
 ```
 
 ## Data Flow
@@ -120,7 +118,7 @@ const mission = await prisma.mission.create({ data: validated })
    - Parse files Added/Modified/Deleted
    - Verify scope vs actual files
 3. Update DB
-4. If phase_complete → update Phase + Mission
+4. If phase_complete -> update Phase + Workflow
 5. Emit WebSocket events
 6. Web UI updates
 ```
@@ -130,4 +128,4 @@ const mission = await prisma.mission.create({ data: validated })
 - **Provider**: SQLite (portable, no server)
 - **Arrays**: Stored as JSON strings
 - **Enums**: Stored as TEXT, validated by Prisma client
-- **Cascade**: Mission delete → Phases → Tasks → Decisions/Issues/Milestones
+- **Cascade**: Workflow delete -> Phases -> Tasks -> Decisions/Issues/Milestones

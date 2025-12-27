@@ -1,4 +1,4 @@
-# Mission Control
+# Workflow Control
 
 Multi-agent workflow orchestration + observability via MCP.
 
@@ -39,7 +39,7 @@ start_task({ caller_type: 'subagent', agent_name: 'feature-implementer', ... })
 
 | Category | Tools |
 |----------|-------|
-| Mission | `start_mission`, `complete_mission`, `get_context` |
+| Workflow | `start_workflow`, `complete_workflow`, `get_context` |
 | Task | `start_task`, `complete_task` |
 | Logging | `log_decision`, `log_issue`, `log_milestone` |
 

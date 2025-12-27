@@ -1,11 +1,11 @@
-# Mission Control
+# Workflow Control
 
-> Orchestration + Observability for Agentic Workflows - Multi-agent mission system with MCP tracking.
+> Orchestration + Observability for Agentic Workflows - Multi-agent workflow system with MCP tracking.
 
 ## Overview
 
-Mission Control is a unified system that:
-1. **Orchestrates** multi-agent missions (phases, sub-agents, coordination)
+Workflow Control is a unified system that:
+1. **Orchestrates** multi-agent workflows (phases, sub-agents, coordination)
 2. **Tracks** everything via MCP tools + SQLite (decisions, progress, files)
 3. **Visualizes** workflows in real-time (WebUI dashboard)
 
@@ -13,14 +13,14 @@ Mission Control is a unified system that:
 
 **Monorepo Structure** (pnpm workspaces)
 ```
-mission-control/
+workflow-control/
 ├── packages/
 │   ├── shared/           # Prisma schema + Types (source of truth)
 │   ├── mcp-server/       # MCP Server (tools for orchestration & tracking)
 │   └── web-ui/           # Next.js Dashboard
-├── mission-system/       # Mission orchestration docs & templates
+├── workflow-system/      # Workflow orchestration docs & templates
 │   ├── docs/             # Architecture, templates, profiles
-│   └── agents/           # mission-architect agent
+│   └── agents/           # workflow-architect agent
 ├── scripts/              # Setup & installation scripts
 └── .claude/              # Dev config for this project
 ```
@@ -38,7 +38,7 @@ mission-control/
 ```bash
 # Clone the repository
 git clone <repository-url>
-cd mission-control
+cd workflow-control
 
 # Run the setup script
 ./scripts/setup.sh
@@ -72,7 +72,7 @@ pnpm build:all
 
 ### MCP Server Configuration
 
-Add Mission Control to your project's `.mcp.json`:
+Add Workflow Control to your project's `.mcp.json`:
 
 ```bash
 # Interactive mode
@@ -87,9 +87,9 @@ Add Mission Control to your project's `.mcp.json`:
 ```json
 {
   "mcpServers": {
-    "mission-control": {
+    "workflow-control": {
       "command": "node",
-      "args": ["/path/to/mission-control/packages/mcp-server/dist/index.js"]
+      "args": ["/path/to/workflow-control/packages/mcp-server/dist/index.js"]
     }
   }
 }
@@ -100,8 +100,8 @@ Add Mission Control to your project's `.mcp.json`:
 The setup script creates symlinks for global access:
 
 ```
-~/.claude/docs/mission-system/     → Mission System documentation
-~/.claude/agents/mission-architect.md → Mission Architect agent
+~/.claude/docs/workflow-system/     -> Workflow System documentation
+~/.claude/agents/workflow-architect.md -> Workflow Architect agent
 ```
 
 To manage symlinks manually:
@@ -140,14 +140,14 @@ Opens at http://localhost:3000
 
 | Tool | Description |
 |------|-------------|
-| `start_mission` | Create a new mission with phases |
-| `complete_mission` | Finalize a mission with summary |
-| `start_task` | Start a task within a workflow/mission |
+| `start_workflow` | Create a new workflow with phases |
+| `complete_workflow` | Finalize a workflow with summary |
+| `start_task` | Start a task within a workflow |
 | `complete_task` | Complete a task with results |
 | `log_decision` | Record an architectural decision |
 | `log_issue` | Report a problem or blocker |
 | `log_milestone` | Mark a milestone achievement |
-| `get_context` | Query mission state and history |
+| `get_context` | Query workflow state and history |
 
 ## Scripts Reference
 
@@ -195,14 +195,14 @@ Opens at http://localhost:3000
 
 Technical documentation is in `.claude/docs/`:
 - **architecture.md** - System architecture
-- **mcp-protocol.md** - MCP tools specifications
+- **mcp-tools.md** - MCP tools specifications
 - **database.md** - Prisma schema reference
 - **standards.md** - Code standards
 
-Mission System docs are in `mission-system/docs/`:
-- **architecture.md** - Mission orchestration patterns
-- **templates/** - Mission, workflow, and agent templates
-- **profiles/** - Simple, standard, and complex mission profiles
+Workflow System docs are in `workflow-system/docs/`:
+- **architecture.md** - Workflow orchestration patterns
+- **templates/** - Workflow and agent templates
+- **profiles/** - Simple, standard, and complex workflow profiles
 
 ## Troubleshooting
 
@@ -233,8 +233,8 @@ pnpm db:migrate
 ./scripts/symlink.sh --force
 
 # Check symlink targets
-ls -la ~/.claude/docs/mission-system
-ls -la ~/.claude/agents/mission-architect.md
+ls -la ~/.claude/docs/workflow-system
+ls -la ~/.claude/agents/workflow-architect.md
 ```
 
 ### Verify Everything Works

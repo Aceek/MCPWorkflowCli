@@ -5,15 +5,14 @@ SQLite via Prisma ORM. Schema in `packages/shared/prisma/schema.prisma`.
 ## Model Hierarchy
 
 ```
-Mission → Phase → Task → Decision/Issue/Milestone
-Workflow (legacy) → Task → Decision/Issue/Milestone
+Workflow → Phase → Task → Decision/Issue/Milestone
 ```
 
 ## Enums
 
 ```prisma
-enum MissionProfile { SIMPLE, STANDARD, COMPLEX }
-enum MissionStatus { PENDING, IN_PROGRESS, COMPLETED, FAILED, BLOCKED }
+enum WorkflowProfile { SIMPLE, STANDARD, COMPLEX }
+enum WorkflowStatus { PENDING, IN_PROGRESS, COMPLETED, FAILED, BLOCKED }
 enum PhaseStatus { PENDING, IN_PROGRESS, COMPLETED, FAILED }
 enum TaskStatus { IN_PROGRESS, SUCCESS, PARTIAL_SUCCESS, FAILED }
 enum CallerType { ORCHESTRATOR, SUBAGENT }
@@ -24,14 +23,17 @@ enum TestsStatus { PASSED, FAILED, NOT_RUN }
 
 ## Models
 
-### Mission
+### Workflow
 | Field | Type | Description |
 |-------|------|-------------|
 | `id` | cuid | Primary key |
 | `name` | string | Short name |
+| `description` | string? | Optional description |
 | `objective` | string | Measurable goal |
-| `profile` | MissionProfile | simple/standard/complex |
-| `status` | MissionStatus | Current state |
+| `scope` | string? | What's included/excluded |
+| `constraints` | string? | Technical limits |
+| `profile` | WorkflowProfile | simple/standard/complex |
+| `status` | WorkflowStatus | Current state |
 | `currentPhase` | int | Progress (0 = not started) |
 | `totalPhases` | int | Expected phases |
 | `phases` | Phase[] | Relation |
@@ -40,14 +42,14 @@ enum TestsStatus { PASSED, FAILED, NOT_RUN }
 | Field | Type | Description |
 |-------|------|-------------|
 | `id` | cuid | Primary key |
-| `missionId` | string | FK to Mission |
+| `workflowId` | string | FK to Workflow |
 | `number` | int | Sequence (1, 2, 3...) |
 | `name` | string | Phase name |
 | `status` | PhaseStatus | Current state |
 | `isParallel` | bool | Parallel tasks allowed |
 | `tasks` | Task[] | Relation |
 
-**Unique**: `[missionId, number]`
+**Unique**: `[workflowId, number]`
 
 ### Task
 | Field | Type | Description |
@@ -96,15 +98,14 @@ enum TestsStatus { PASSED, FAILED, NOT_RUN }
 
 | Model | Indexes |
 |-------|---------|
-| Mission | `[status]`, `[createdAt]` |
-| Phase | `[missionId, number]` (unique), `[missionId]` |
+| Workflow | `[status]`, `[createdAt]` |
+| Phase | `[workflowId, number]` (unique), `[workflowId]` |
 | Task | `[workflowId]`, `[phaseId]`, `[status]`, `[callerType]`, `[agentName]` |
 
 ## Cascade Deletes
 
 ```
-Mission → Phases → Tasks → Decisions/Issues/Milestones
-Workflow → Tasks → Decisions/Issues/Milestones
+Workflow → Phases → Tasks → Decisions/Issues/Milestones
 ```
 
 ## SQLite Notes

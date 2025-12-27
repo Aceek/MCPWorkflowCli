@@ -1,16 +1,24 @@
-# Mission Control - Roadmap
+# [SUPERSEDED] Mission Control - Roadmap
+
+> **Note**: This roadmap has been completed and superseded.
+> The Mission and Workflow models have been unified into a single Workflow model.
+> See `.claude/docs/` for current documentation.
+
+---
+
+## HISTORICAL CONTEXT (Archived)
 
 ## Overview
 
 | Phase | Name | Goal | Status |
 |-------|------|------|--------|
 | 1 | **Merge & Reorganize** | Single repo with proper structure | `completed` |
-| 2 | **Schema Extension** | Add Mission, Phase, CallerType to DB | `completed` |
+| 2 | **Schema Extension** | Add Workflow, Phase, CallerType to DB | `completed` |
 | 3 | **MCP Tools Extension** | 8 simplified tools + phase auto-management | `completed` |
 | 4 | **Agent Adaptation** | Update agent prompts for MCP | `completed` |
-| 5 | **WebUI Adaptation** | Mission/Phase hierarchy views | `completed` |
+| 5 | **WebUI Adaptation** | Workflow/Phase hierarchy views | `completed` |
 | 6 | **Setup Script** | Guided installation + verification | `completed` |
-| 7 | **Documentation** | Update all docs for new system | `pending` |
+| 7 | **Documentation** | Update all docs for new system | `completed` |
 
 ---
 
