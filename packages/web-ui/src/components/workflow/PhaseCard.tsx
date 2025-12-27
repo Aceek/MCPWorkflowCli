@@ -6,7 +6,7 @@ import { useState } from 'react'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
-import { AgentBadge } from './AgentBadge'
+import { TaskCard } from '../task/TaskCard'
 import { formatDuration } from '@/lib/date-utils'
 import type { PhaseWithStats } from '@/lib/api'
 import { cn } from '@/lib/utils'
@@ -109,48 +109,13 @@ export function PhaseCard({ phase, isActive = false }: PhaseCardProps) {
                 transition={{ duration: 0.2 }}
                 className="border-t border-[hsl(var(--border))]"
               >
-                <div className="p-4 space-y-3">
+                <div className="p-4 space-y-4">
                   {phase.tasks.map((task) => (
-                    <div
+                    <TaskCard
                       key={task.id}
-                      className="flex items-center gap-3 p-3 rounded-lg bg-[hsl(var(--muted)/0.3)]"
-                    >
-                      {/* Task status indicator */}
-                      <div
-                        className={cn(
-                          'w-2 h-2 rounded-full flex-shrink-0',
-                          task.status === 'SUCCESS' && 'bg-green-500',
-                          task.status === 'PARTIAL_SUCCESS' && 'bg-yellow-500',
-                          task.status === 'FAILED' && 'bg-red-500',
-                          task.status === 'IN_PROGRESS' && 'bg-blue-500 animate-pulse'
-                        )}
-                      />
-
-                      {/* Task info */}
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm truncate">{task.name}</p>
-                        {task.agentName && (
-                          <AgentBadge
-                            agentName={task.agentName}
-                            callerType={task.callerType}
-                            className="mt-1"
-                          />
-                        )}
-                      </div>
-
-                      {/* Task stats */}
-                      <div className="flex items-center gap-2 text-xs text-[hsl(var(--muted-foreground))]">
-                        {task._count.decisions > 0 && (
-                          <span>{task._count.decisions} decisions</span>
-                        )}
-                        {task._count.milestones > 0 && (
-                          <span>{task._count.milestones} milestones</span>
-                        )}
-                        {task.durationMs && (
-                          <span>{formatDuration(task.durationMs)}</span>
-                        )}
-                      </div>
-                    </div>
+                      task={task}
+                      formatDuration={formatDuration}
+                    />
                   ))}
                 </div>
               </motion.div>

@@ -5,7 +5,7 @@
  * error handling, and logging.
  */
 
-import type { Workflow, Phase, Task, Issue } from '@prisma/client'
+import type { Workflow, Phase, Task, Issue, Decision, Milestone } from '@prisma/client'
 import { createLogger } from './logger'
 
 const logger = createLogger('api')
@@ -125,11 +125,21 @@ export type PhaseWithStats = Phase & {
   totalDurationMs?: number
   tasksCount?: number
   completedTasksCount?: number
-  tasks?: TaskWithCounts[]
+  tasks?: TaskWithRelations[]
 }
 
 /**
- * Task with counts for related entities
+ * Task with full relations for display
+ */
+export type TaskWithRelations = Task & {
+  decisions: Decision[]
+  issues: Issue[]
+  milestones: Milestone[]
+  subtasks?: TaskWithRelations[]
+}
+
+/**
+ * Task with counts for related entities (legacy, used in some views)
  */
 export type TaskWithCounts = Task & {
   _count: {
