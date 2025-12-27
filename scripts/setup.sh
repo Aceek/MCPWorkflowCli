@@ -213,31 +213,44 @@ create_symlinks() {
   echo ""
 }
 
+# Generate MCP config for this project
+generate_mcp_config() {
+  print_step "Generating MCP config for this project..."
+
+  if "$SCRIPT_DIR/generate-mcp-config.sh" --force "$PROJECT_DIR" > /dev/null 2>&1; then
+    print_success "MCP config created: $PROJECT_DIR/.mcp.json"
+  else
+    print_warning "MCP config generation had issues (non-fatal)"
+  fi
+  echo ""
+}
+
 # Print next steps
 print_next_steps() {
   echo -e "${GREEN}╔══════════════════════════════════════════════════╗${NC}"
   echo -e "${GREEN}║${NC}           ${GREEN}Setup Complete!${NC}                        ${GREEN}║${NC}"
   echo -e "${GREEN}╚══════════════════════════════════════════════════╝${NC}"
   echo ""
+  echo -e "${BLUE}What was configured:${NC}"
+  echo "  ✓ Dependencies installed"
+  echo "  ✓ Database initialized"
+  echo "  ✓ MCP server built"
+  echo "  ✓ Symlinks created in ~/.claude/"
+  echo "  ✓ MCP config generated (.mcp.json)"
+  echo ""
   echo -e "${BLUE}Next steps:${NC}"
   echo ""
-  echo "  1. Configure MCP in your project:"
-  echo "     Create a .mcp.json file in your project directory:"
+  echo "  1. Restart Claude Code to connect MCP:"
+  echo -e "     ${CYAN}exit${NC} then ${CYAN}claude${NC}"
   echo ""
-  echo -e "     ${CYAN}{"
-  echo '       "mcpServers": {'
-  echo '         "mission-control": {'
-  echo "           \"command\": \"node\","
-  echo "           \"args\": [\"$PROJECT_DIR/packages/mcp-server/dist/index.js\"]"
-  echo '         }'
-  echo '       }'
-  echo -e "     }${NC}"
+  echo "  2. Verify MCP connection:"
+  echo -e "     ${CYAN}/mcp${NC} (should show mission-control: connected)"
   echo ""
-  echo "  2. Start the web UI (optional):"
-  echo -e "     ${CYAN}cd $PROJECT_DIR && pnpm dev:ui${NC}"
+  echo "  3. Test with a mission:"
+  echo -e "     ${CYAN}\"Create a mission for [your objective]\"${NC}"
   echo ""
-  echo "  3. Verify MCP connection:"
-  echo -e "     ${CYAN}$SCRIPT_DIR/verify-mcp.sh${NC}"
+  echo "  4. Start the web UI (optional):"
+  echo -e "     ${CYAN}pnpm dev:ui${NC}"
   echo ""
   echo -e "${BLUE}Documentation:${NC}"
   echo "  - Mission System: ~/.claude/docs/mission-system/"
@@ -261,6 +274,7 @@ main() {
     fi
     if [ "$SKIP_SYMLINKS" = false ]; then
       echo "  • Create symlinks in ~/.claude/"
+      echo "  • Generate .mcp.json for this project"
     fi
     echo ""
     read -p "Continue? [Y/n] " -n 1 -r
@@ -278,6 +292,7 @@ main() {
   run_migrations
   build_project
   create_symlinks
+  generate_mcp_config
   print_next_steps
 }
 
