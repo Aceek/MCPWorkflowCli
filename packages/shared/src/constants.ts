@@ -8,55 +8,48 @@
  * @module @mission-control/shared/constants
  */
 
+import {
+  WorkflowStatus,
+  TaskStatus,
+  DecisionCategory,
+  IssueType,
+  TestsStatus,
+  WorkflowProfile,
+  PhaseStatus,
+  CallerType,
+} from './index.js'
+
 // ============================================
-// ENUM VALUE ARRAYS (for iteration/filtering)
+// ENUM VALUE ARRAYS (derived from enum objects)
 // ============================================
 
 /**
- * All possible workflow status values
+ * All possible workflow status values (subset for legacy compatibility)
  */
-export const WORKFLOW_STATUSES = [
-  'IN_PROGRESS',
-  'COMPLETED',
-  'FAILED',
-] as const
+export const WORKFLOW_STATUSES = Object.values(WorkflowStatus).filter(
+  (s): s is 'IN_PROGRESS' | 'COMPLETED' | 'FAILED' =>
+    s === 'IN_PROGRESS' || s === 'COMPLETED' || s === 'FAILED'
+)
 
 /**
  * All possible task status values
  */
-export const TASK_STATUSES = [
-  'IN_PROGRESS',
-  'SUCCESS',
-  'PARTIAL_SUCCESS',
-  'FAILED',
-] as const
+export const TASK_STATUSES = Object.values(TaskStatus)
 
 /**
  * All possible decision category values
  */
-export const DECISION_CATEGORIES = [
-  'ARCHITECTURE',
-  'LIBRARY_CHOICE',
-  'TRADE_OFF',
-  'WORKAROUND',
-  'OTHER',
-] as const
+export const DECISION_CATEGORIES = Object.values(DecisionCategory)
 
 /**
  * All possible issue type values
  */
-export const ISSUE_TYPES = [
-  'DOC_GAP',
-  'BUG',
-  'DEPENDENCY_CONFLICT',
-  'UNCLEAR_REQUIREMENT',
-  'OTHER',
-] as const
+export const ISSUE_TYPES = Object.values(IssueType)
 
 /**
  * All possible tests status values
  */
-export const TESTS_STATUSES = ['PASSED', 'FAILED', 'NOT_RUN'] as const
+export const TESTS_STATUSES = Object.values(TestsStatus)
 
 // ============================================
 // WORKFLOW EXTENDED ENUM VALUE ARRAYS
@@ -65,42 +58,34 @@ export const TESTS_STATUSES = ['PASSED', 'FAILED', 'NOT_RUN'] as const
 /**
  * All possible workflow profile values
  */
-export const WORKFLOW_PROFILES = ['SIMPLE', 'STANDARD', 'COMPLEX'] as const
+export const WORKFLOW_PROFILES = Object.values(WorkflowProfile)
 
 /**
  * All possible workflow status values (full set including PENDING/BLOCKED)
  */
-export const WORKFLOW_STATUSES_FULL = [
-  'PENDING',
-  'IN_PROGRESS',
-  'COMPLETED',
-  'FAILED',
-  'BLOCKED',
-] as const
+export const WORKFLOW_STATUSES_FULL = Object.values(WorkflowStatus)
 
 /**
  * All possible phase status values
  */
-export const PHASE_STATUSES = [
-  'PENDING',
-  'IN_PROGRESS',
-  'COMPLETED',
-  'FAILED',
-] as const
+export const PHASE_STATUSES = Object.values(PhaseStatus)
 
 /**
  * All possible caller type values
  */
-export const CALLER_TYPES = ['ORCHESTRATOR', 'SUBAGENT'] as const
+export const CALLER_TYPES = Object.values(CallerType)
 
 // ============================================
 // DISPLAY LABELS (for UI)
 // ============================================
 
 /**
- * Human-readable labels for workflow statuses
+ * Human-readable labels for workflow statuses (subset)
  */
-export const WORKFLOW_STATUS_LABELS: Record<string, string> = {
+export const WORKFLOW_STATUS_LABELS: Record<
+  'IN_PROGRESS' | 'COMPLETED' | 'FAILED',
+  string
+> = {
   IN_PROGRESS: 'In Progress',
   COMPLETED: 'Completed',
   FAILED: 'Failed',
@@ -109,7 +94,7 @@ export const WORKFLOW_STATUS_LABELS: Record<string, string> = {
 /**
  * Human-readable labels for task statuses
  */
-export const TASK_STATUS_LABELS: Record<string, string> = {
+export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
   IN_PROGRESS: 'In Progress',
   SUCCESS: 'Success',
   PARTIAL_SUCCESS: 'Partial Success',
@@ -119,7 +104,7 @@ export const TASK_STATUS_LABELS: Record<string, string> = {
 /**
  * Human-readable labels for decision categories
  */
-export const DECISION_CATEGORY_LABELS: Record<string, string> = {
+export const DECISION_CATEGORY_LABELS: Record<DecisionCategory, string> = {
   ARCHITECTURE: 'Architecture',
   LIBRARY_CHOICE: 'Library Choice',
   TRADE_OFF: 'Trade-off',
@@ -130,7 +115,7 @@ export const DECISION_CATEGORY_LABELS: Record<string, string> = {
 /**
  * Human-readable labels for issue types
  */
-export const ISSUE_TYPE_LABELS: Record<string, string> = {
+export const ISSUE_TYPE_LABELS: Record<IssueType, string> = {
   DOC_GAP: 'Documentation Gap',
   BUG: 'Bug',
   DEPENDENCY_CONFLICT: 'Dependency Conflict',
@@ -141,7 +126,7 @@ export const ISSUE_TYPE_LABELS: Record<string, string> = {
 /**
  * Human-readable labels for tests statuses
  */
-export const TESTS_STATUS_LABELS: Record<string, string> = {
+export const TESTS_STATUS_LABELS: Record<TestsStatus, string> = {
   PASSED: 'Passed',
   FAILED: 'Failed',
   NOT_RUN: 'Not Run',
@@ -154,7 +139,7 @@ export const TESTS_STATUS_LABELS: Record<string, string> = {
 /**
  * Human-readable labels for workflow profiles
  */
-export const WORKFLOW_PROFILE_LABELS: Record<string, string> = {
+export const WORKFLOW_PROFILE_LABELS: Record<WorkflowProfile, string> = {
   SIMPLE: 'Simple',
   STANDARD: 'Standard',
   COMPLEX: 'Complex',
@@ -163,7 +148,7 @@ export const WORKFLOW_PROFILE_LABELS: Record<string, string> = {
 /**
  * Human-readable labels for workflow statuses (full set)
  */
-export const WORKFLOW_STATUS_LABELS_FULL: Record<string, string> = {
+export const WORKFLOW_STATUS_LABELS_FULL: Record<WorkflowStatus, string> = {
   PENDING: 'Pending',
   IN_PROGRESS: 'In Progress',
   COMPLETED: 'Completed',
@@ -174,7 +159,7 @@ export const WORKFLOW_STATUS_LABELS_FULL: Record<string, string> = {
 /**
  * Human-readable labels for phase statuses
  */
-export const PHASE_STATUS_LABELS: Record<string, string> = {
+export const PHASE_STATUS_LABELS: Record<PhaseStatus, string> = {
   PENDING: 'Pending',
   IN_PROGRESS: 'In Progress',
   COMPLETED: 'Completed',
@@ -184,7 +169,7 @@ export const PHASE_STATUS_LABELS: Record<string, string> = {
 /**
  * Human-readable labels for caller types
  */
-export const CALLER_TYPE_LABELS: Record<string, string> = {
+export const CALLER_TYPE_LABELS: Record<CallerType, string> = {
   ORCHESTRATOR: 'Orchestrator',
   SUBAGENT: 'Sub-agent',
 }
@@ -194,9 +179,12 @@ export const CALLER_TYPE_LABELS: Record<string, string> = {
 // ============================================
 
 /**
- * Tailwind CSS color classes for workflow statuses
+ * Tailwind CSS color classes for workflow statuses (subset)
  */
-export const WORKFLOW_STATUS_COLORS: Record<string, string> = {
+export const WORKFLOW_STATUS_COLORS: Record<
+  'IN_PROGRESS' | 'COMPLETED' | 'FAILED',
+  string
+> = {
   IN_PROGRESS: 'bg-blue-500 text-white',
   COMPLETED: 'bg-green-500 text-white',
   FAILED: 'bg-red-500 text-white',
@@ -205,7 +193,7 @@ export const WORKFLOW_STATUS_COLORS: Record<string, string> = {
 /**
  * Tailwind CSS color classes for task statuses
  */
-export const TASK_STATUS_COLORS: Record<string, string> = {
+export const TASK_STATUS_COLORS: Record<TaskStatus, string> = {
   IN_PROGRESS: 'bg-blue-500 text-white',
   SUCCESS: 'bg-green-500 text-white',
   PARTIAL_SUCCESS: 'bg-yellow-500 text-white',
@@ -215,7 +203,7 @@ export const TASK_STATUS_COLORS: Record<string, string> = {
 /**
  * Tailwind CSS color classes for tests statuses
  */
-export const TESTS_STATUS_COLORS: Record<string, string> = {
+export const TESTS_STATUS_COLORS: Record<TestsStatus, string> = {
   PASSED: 'bg-green-500 text-white',
   FAILED: 'bg-red-500 text-white',
   NOT_RUN: 'bg-gray-500 text-white',
@@ -228,7 +216,7 @@ export const TESTS_STATUS_COLORS: Record<string, string> = {
 /**
  * Tailwind CSS color classes for workflow profiles
  */
-export const WORKFLOW_PROFILE_COLORS: Record<string, string> = {
+export const WORKFLOW_PROFILE_COLORS: Record<WorkflowProfile, string> = {
   SIMPLE: 'bg-gray-500 text-white',
   STANDARD: 'bg-blue-500 text-white',
   COMPLEX: 'bg-purple-500 text-white',
@@ -237,7 +225,7 @@ export const WORKFLOW_PROFILE_COLORS: Record<string, string> = {
 /**
  * Tailwind CSS color classes for workflow statuses (full set)
  */
-export const WORKFLOW_STATUS_COLORS_FULL: Record<string, string> = {
+export const WORKFLOW_STATUS_COLORS_FULL: Record<WorkflowStatus, string> = {
   PENDING: 'bg-gray-500 text-white',
   IN_PROGRESS: 'bg-blue-500 text-white',
   COMPLETED: 'bg-green-500 text-white',
@@ -248,7 +236,7 @@ export const WORKFLOW_STATUS_COLORS_FULL: Record<string, string> = {
 /**
  * Tailwind CSS color classes for phase statuses
  */
-export const PHASE_STATUS_COLORS: Record<string, string> = {
+export const PHASE_STATUS_COLORS: Record<PhaseStatus, string> = {
   PENDING: 'bg-gray-500 text-white',
   IN_PROGRESS: 'bg-blue-500 text-white',
   COMPLETED: 'bg-green-500 text-white',
@@ -258,7 +246,7 @@ export const PHASE_STATUS_COLORS: Record<string, string> = {
 /**
  * Tailwind CSS color classes for caller types
  */
-export const CALLER_TYPE_COLORS: Record<string, string> = {
+export const CALLER_TYPE_COLORS: Record<CallerType, string> = {
   ORCHESTRATOR: 'bg-indigo-500 text-white',
   SUBAGENT: 'bg-teal-500 text-white',
 }
