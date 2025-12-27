@@ -2,21 +2,21 @@
 
 MCP-based orchestration for multi-agent workflows.
 
-## MCP Ownership (CRITICAL)
+## MCP Access
 
-**Subagents CANNOT call MCP tools** (known Claude Code limitation).
+**Subagents CAN call MCP tools directly.** Full access to all `mcp__mission-control__*` tools.
 
-| Caller | MCP Access | Tools Used |
-|--------|------------|------------|
-| Orchestrator | ✅ Full | `start_task`, `complete_task`, `log_*`, `get_context` |
-| Subagent | ❌ None | Standard tools only (Read, Write, Grep, etc.) |
+| Caller | MCP Access | Role |
+|--------|------------|------|
+| Orchestrator | ✅ Full | Coordinates phases, monitors progress |
+| Subagent | ✅ Full | Manages own task lifecycle + logs progress |
 
 ## Quick Reference
 
 | Caller | Responsibility |
 |--------|----------------|
-| Orchestrator | ALL MCP calls + parse subagent output |
-| Sub-agent | Do work + return structured output |
+| Orchestrator | start_workflow, launch subagents, monitor, complete_workflow |
+| Sub-agent | start_task → work → log_* → complete_task |
 
 ## Orchestrator Protocol
 
@@ -26,22 +26,25 @@ Read .claude/workflows/<name>/definition.md  → workflow_id, objectives
 Read .claude/workflows/<name>/workflow.md    → phases, agents
 ```
 
-### 2. Phase Loop (Hybrid Pattern)
+### 2. Workflow Start
 ```
-FOR each phase:
-  1. start_task({caller_type: "orchestrator", name: "Phase N", ...}) → task_id
-  2. Launch sub-agent via Task tool (pass task_id in prompt)
-  3. Receive structured output from subagent
-  4. Parse output and call MCP:
-     - FOR each decision → log_decision({task_id, ...})
-     - FOR each issue → log_issue({task_id, ...})
-     - log_milestone({task_id, progress, message})
-  5. complete_task({task_id, status, outcome, phase_complete: true})
-  6. get_context({include: ["blockers"]})
-  7. IF blockers → STOP, request human help
+start_workflow({name, objective, profile, total_phases}) → workflow_id
 ```
 
-### 3. Completion
+### 3. Phase Loop (Direct Pattern)
+```
+FOR each phase:
+  1. Launch sub-agent via Task tool (pass workflow_id in prompt)
+  2. Subagent manages own MCP calls:
+     - start_task() → task_id
+     - [does work]
+     - log_milestone(), log_decision(), log_issue()
+     - complete_task()
+  3. Monitor via get_context({include: ["tasks", "blockers"]})
+  4. IF blockers → STOP, request human help
+```
+
+### 4. Completion
 ```
 complete_workflow({
   workflow_id, status: "completed",
@@ -51,38 +54,19 @@ complete_workflow({
 
 ## Sub-Agent Protocol
 
-### Output Format (REQUIRED)
+Subagents have **full MCP access** and manage their own task lifecycle.
 
-Subagents MUST return structured output for orchestrator to parse:
+### Subagent MCP Flow
 
-```yaml
-# Subagent returns this structure
-output:
-  status: "success" | "partial" | "failed"
-  summary: "What was accomplished (2-3 sentences)"
-
-  achievements:          # Optional
-    - "Achievement 1"
-    - "Achievement 2"
-
-  decisions:             # Optional - orchestrator will log_decision()
-    - category: "architecture" | "library" | "approach" | "scope"
-      question: "What was the decision about?"
-      chosen: "What was chosen"
-      reasoning: "Why (1-2 sentences)"
-
-  issues:                # Optional - orchestrator will log_issue()
-    - type: "blocker" | "bug" | "dependency" | "unclear_requirement"
-      description: "What's the issue"
-      requires_human: true | false
-
-  progress: 75           # Optional, 0-100
-
-  files_modified:        # Optional
-    - "path/to/file.ts"
-
-  next_steps:            # Optional
-    - "What should happen next"
+```
+1. Receive workflow_id from orchestrator (in prompt)
+2. start_task({workflow_id, name, goal, caller_type: "subagent", agent_name}) → task_id
+3. Do work (Read, Write, Edit, Bash, etc.)
+4. Log progress in real-time:
+   - log_milestone({task_id, message, progress})
+   - log_decision({task_id, category, question, chosen, reasoning})
+   - log_issue({task_id, type, description}) if blockers
+5. complete_task({task_id, status, outcome})
 ```
 
 ### Subagent Prompt Template
@@ -91,8 +75,8 @@ output:
 # Task: {task_name}
 
 **Workflow**: {workflow_name}
+**Workflow ID**: `{workflow_id}`
 **Phase**: {phase_number}
-**Task ID**: {task_id}
 
 ## Your Goal
 {task_goal}
@@ -105,33 +89,42 @@ output:
 2. {instruction_2}
 3. {instruction_3}
 
-## Output Format (REQUIRED)
+## MCP Protocol
 
-Return a structured result that the orchestrator will parse:
+You have full access to MCP tools. Follow this protocol:
 
-STATUS: success | partial | failed
-SUMMARY: What you accomplished (2-3 sentences)
+1. Start your task:
+   ```
+   start_task({
+     workflow_id: "{workflow_id}",
+     name: "{task_name}",
+     goal: "{task_goal}",
+     caller_type: "subagent",
+     agent_name: "{agent_name}",
+     areas: ["{scope_paths}"]
+   })
+   ```
 
-ACHIEVEMENTS:
-- Achievement 1
-- Achievement 2
+2. Log progress as you work:
+   - `log_milestone({task_id, message, progress})` - for significant progress
+   - `log_decision({task_id, category, question, chosen, reasoning})` - for architectural choices
 
-DECISIONS: (if any architectural choices were made)
-- Category: architecture | library | approach | scope
-  Question: What was decided?
-  Chosen: What option was selected
-  Reasoning: Why this choice
+3. If blocked:
+   - `log_issue({task_id, type, description, requires_human_review: true})`
 
-ISSUES: (if any blockers encountered)
-- Type: blocker | bug | dependency | unclear_requirement
-  Description: What's the issue
-  RequiresHuman: true | false
-
-PROGRESS: 0-100 (estimated completion)
-
-FILES_MODIFIED:
-- path/to/file1.ts
-- path/to/file2.ts
+4. Complete your task:
+   ```
+   complete_task({
+     task_id,
+     status: "success" | "partial_success" | "failed",
+     outcome: {
+       summary: "What was accomplished",
+       achievements: ["..."],
+       limitations: ["..."],
+       next_steps: ["..."]
+     }
+   })
+   ```
 ```
 
 ## MCP Tool Schemas
@@ -175,7 +168,7 @@ FILES_MODIFIED:
 | Field | Type | Required |
 |-------|------|----------|
 | `task_id` | string | yes |
-| `category` | enum | yes | `architecture`, `library`, `approach`, `scope` |
+| `category` | enum | yes | `architecture`, `library_choice`, `trade_off`, `workaround`, `other` |
 | `question` | string | yes |
 | `chosen` | string | yes |
 | `reasoning` | string | yes |
@@ -193,7 +186,7 @@ FILES_MODIFIED:
 | Field | Type | Required |
 |-------|------|----------|
 | `task_id` | string | yes |
-| `type` | enum | yes | `blocker`, `bug`, `dependency`, `unclear_requirement` |
+| `type` | enum | yes | `documentation_gap`, `bug_encountered`, `dependency_conflict`, `unclear_requirement`, `other` |
 | `description` | string | yes |
 | `requires_human_review` | bool | no | Creates blocker |
 
@@ -207,55 +200,12 @@ FILES_MODIFIED:
 | `achievements` | string[] | no |
 | `limitations` | string[] | no |
 
-## Orchestrator Parsing Example
-
-```python
-# Orchestrator receives subagent output, then:
-
-# 1. Parse decisions and log them
-for decision in subagent_output.decisions:
-    log_decision({
-        task_id: task_id,
-        category: decision.category,
-        question: decision.question,
-        chosen: decision.chosen,
-        reasoning: decision.reasoning
-    })
-
-# 2. Parse issues and log them
-for issue in subagent_output.issues:
-    log_issue({
-        task_id: task_id,
-        type: issue.type,
-        description: issue.description,
-        requires_human_review: issue.requires_human
-    })
-
-# 3. Log progress
-log_milestone({
-    task_id: task_id,
-    message: subagent_output.summary,
-    progress: subagent_output.progress
-})
-
-# 4. Complete task
-complete_task({
-    task_id: task_id,
-    status: subagent_output.status,
-    outcome: {
-        summary: subagent_output.summary,
-        achievements: subagent_output.achievements
-    }
-})
-```
-
 ## Error Handling
 
 ### Blocker Detection
-1. Subagent returns `issues` with `requires_human: true`
-2. Orchestrator calls `log_issue({requiresHumanReview: true})`
-3. Orchestrator detects via `get_context({include: ["blockers"]})`
-4. Orchestrator STOPS and requests human intervention
+1. Subagent calls `log_issue({requires_human_review: true})`
+2. Orchestrator detects via `get_context({include: ["blockers"]})`
+3. Orchestrator STOPS and requests human intervention
 
 ### Phase Failure
 ```
@@ -268,10 +218,10 @@ Then: Retry, Skip (if non-critical), or Abort workflow.
 
 ## MCP Call Budgets
 
-| Complexity | Orchestrator Calls | Pattern |
-|------------|-------------------|---------|
+| Complexity | Subagent Calls | Pattern |
+|------------|----------------|---------|
 | Simple | 2-3 | start + complete |
 | Standard | 4-6 | + get_context, 1-2 logs |
 | Complex | 6-10 | + multiple logs per decision/issue |
 
-**Note**: Subagents make 0 MCP calls - all logging done by orchestrator.
+**Note**: Both orchestrator and subagents have full MCP access.

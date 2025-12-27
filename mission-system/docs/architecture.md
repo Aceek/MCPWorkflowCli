@@ -23,14 +23,14 @@ Multi-agent workflow orchestration via MCP tools.
 
 ## Core Concepts
 
-### MCP Ownership (CRITICAL)
+### MCP Access
 
-**Subagents CANNOT call MCP tools** (known Claude Code limitation).
+**Subagents CAN call MCP tools directly.** Full access to all `mcp__mission-control__*` tools.
 
-| Caller | MCP Access | Responsibility |
-|--------|------------|----------------|
-| Orchestrator | ✅ Full | ALL MCP calls |
-| Subagent | ❌ None | Work + return structured output |
+| Caller | MCP Access | Role |
+|--------|------------|------|
+| Orchestrator | ✅ Full | Coordinates phases, monitors progress |
+| Subagent | ✅ Full | Manages own task lifecycle + logs progress |
 
 ### State Management
 All state via MCP tools (no file-based memory):
@@ -47,34 +47,37 @@ All state via MCP tools (no file-based memory):
 ### Orchestrator
 - Reads definition.md + workflow.md at start
 - Executes phases sequentially (or parallel)
-- **Handles ALL MCP calls** (subagents cannot)
-- Launches sub-agents via Task tool
-- Parses subagent output and calls MCP accordingly
+- Launches sub-agents via Task tool with workflow_id
+- Monitors progress via `get_context()`
+- Handles blockers requiring human review
+- Calls `complete_workflow()` when all phases done
 - NEVER delegates orchestration
 
 ### Sub-Agents
 - Isolated context per agent
-- **NO MCP access** - return structured output instead
-- Orchestrator parses output and logs to MCP
+- **Full MCP access** - manage own task lifecycle
+- Call `start_task()` → do work → `log_*()` → `complete_task()`
+- Can query context via `get_context()`
 - Focus on actual work (analysis, implementation, review)
 
-### Hybrid Pattern
+### Direct Pattern
 
 ```
 Orchestrator                          Subagent
      │                                    │
-     ├── start_task() ────────────────────┤
-     │        ↓ task_id                   │
-     ├── Task tool (prompt + task_id) ───>│
-     │                                    ├── [does work]
-     │                                    ├── [writes files]
-     │<── structured result ──────────────┤
+     ├── start_workflow() → workflow_id   │
      │                                    │
-     ├── parse result                     │
-     ├── log_decision() (for each)        │
-     ├── log_milestone()                  │
-     ├── log_issue() (if blockers)        │
-     └── complete_task()                  │
+     ├── Task tool (prompt + workflow_id) ────>│
+     │                                    ├── start_task() → task_id
+     │                                    ├── [does work]
+     │                                    ├── log_milestone() (real-time)
+     │                                    ├── log_decision() (each choice)
+     │                                    ├── log_issue() (if blockers)
+     │                                    └── complete_task()
+     │<── agent done ─────────────────────┤
+     │                                    │
+     ├── get_context() (monitor)          │
+     └── complete_workflow()              │
 ```
 
 ### subagent_type Rules
@@ -88,15 +91,14 @@ Orchestrator                          Subagent
 
 ```
 1. Read definition.md, workflow.md
-2. FOR each phase:
-   a. start_task (orchestrator)
-   b. Launch sub-agent(s) via Task tool
-   c. Receive structured output from subagent
-   d. Parse output → call log_decision/log_milestone/log_issue
-   e. complete_task (phase_complete: true)
-   f. Check blockers via get_context
-3. IF blocker → STOP
-4. complete_workflow
+2. start_workflow() → workflow_id
+3. FOR each phase:
+   a. Launch sub-agent(s) via Task tool (pass workflow_id)
+   b. Subagent manages own MCP calls (start_task → log_* → complete_task)
+   c. Monitor via get_context({include: ["tasks", "blockers"]})
+   d. Check blockers
+4. IF blocker → STOP, request human help
+5. complete_workflow()
 ```
 
 ### Parallel Execution
@@ -142,7 +144,6 @@ phases:
 - No overlapping scopes in parallel
 - File-writing agents = `general-purpose`
 - All phases need `number` field
-- Subagent prompts must NOT include MCP calls
 
 ## CLAUDE.md Integration
 

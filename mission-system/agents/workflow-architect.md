@@ -15,19 +15,19 @@ Expert in designing multi-agent workflows with MCP state tracking.
 - `~/.claude/docs/workflow-system/usage.md`
 - `~/.claude/docs/workflow-system/templates/`
 
-## MCP Ownership (CRITICAL)
+## MCP Access
 
-**Subagents CANNOT call MCP tools** (known Claude Code limitation).
+**Subagents CAN call MCP tools directly.** Full access to all `mcp__mission-control__*` tools.
 
 | Caller | MCP Access | Role |
 |--------|------------|------|
-| Orchestrator | ✅ Full | ALL MCP calls |
-| Subagent | ❌ None | Work + return structured output |
+| Orchestrator | ✅ Full | Coordinates phases, monitors progress |
+| Subagent | ✅ Full | Manages own task lifecycle + logs progress |
 
 When generating workflows:
-- **DO NOT** include MCP calls in subagent prompts
-- **DO** include structured output format in subagent prompts
-- **DO** include orchestrator MCP actions for each phase
+- **DO** include MCP protocol in subagent prompts
+- **DO** pass workflow_id to subagents (they call start_task themselves)
+- **DO** include orchestrator monitoring actions for each phase
 
 ## Execution Protocol
 
@@ -51,8 +51,8 @@ Ask about:
 ### 3. Design Workflow
 - Draw ASCII schema of agent flow
 - Define phases with NUMBER, agents, scopes, completion criteria
-- Include **Orchestrator Actions** for each phase (MCP calls)
-- Include **Agent Prompts** with structured output format (NO MCP)
+- Include **Orchestrator Actions** for each phase (monitor, handle blockers)
+- Include **Agent Prompts** with MCP protocol
 - Identify human checkpoints
 - Define blocker escalation
 
@@ -69,7 +69,7 @@ Agents: <list>
 1. **Call `start_workflow`** → Get `workflow_id`
 2. Create `/project/.claude/workflows/<name>/`
 3. Write definition.md (with workflow_id)
-4. Write workflow.md (with hybrid pattern)
+4. Write workflow.md (with direct MCP pattern)
 5. Write start.md (orchestrator prompt)
 6. Update project CLAUDE.md
 
@@ -81,9 +81,8 @@ Agents: <list>
 - [ ] All phases have completion criteria
 - [ ] `start_workflow` called → workflow_id obtained
 - [ ] workflow_id in all generated files
-- [ ] **Subagent prompts have NO MCP calls**
-- [ ] **Subagent prompts have structured output format**
-- [ ] **Orchestrator actions include MCP calls**
+- [ ] **Subagent prompts include MCP protocol**
+- [ ] **Orchestrator actions include monitoring**
 - [ ] **NO memory.md created** (state via MCP only)
 
 ## File Templates
@@ -127,14 +126,14 @@ Agents: <list>
 │ Phase 2      │
 └──────────────┘
 
-## MCP Ownership (CRITICAL)
+## MCP Access
 
-**Subagents CANNOT call MCP tools** - orchestrator handles all MCP calls.
+**Subagents CAN call MCP tools directly.** Full access to all `mcp__mission-control__*` tools.
 
-| Caller | MCP Access | Responsibility |
-|--------|------------|----------------|
-| Orchestrator | ✅ Full | start_task, complete_task, log_*, get_context |
-| Subagent | ❌ None | Do work + return structured output |
+| Caller | MCP Access | Role |
+|--------|------------|------|
+| Orchestrator | ✅ Full | Coordinates phases, monitors progress |
+| Subagent | ✅ Full | Manages own task lifecycle + logs progress |
 
 ## Phases
 
@@ -152,10 +151,9 @@ phase:
 
 **Orchestrator Actions:**
 ```
-1. start_task({workflow_id, name: "Phase 1", goal: "...", caller_type: "orchestrator"}) → task_id
-2. Launch subagent via Task tool (pass task_id in prompt)
-3. Parse subagent output → log_decision(), log_milestone(), log_issue()
-4. complete_task({task_id, status, outcome})
+1. Launch subagent via Task tool (pass workflow_id in prompt)
+2. Monitor via get_context({include: ["tasks", "blockers"]})
+3. Handle blockers if requires_human_review
 ```
 
 **Agent Prompt:**
@@ -163,8 +161,8 @@ phase:
 # Task: <task_name>
 
 **Workflow**: <name>
+**Workflow ID**: `{workflow_id}`
 **Phase**: 1
-**Task ID**: {task_id}
 
 ## Your Goal
 <task description>
@@ -175,35 +173,35 @@ phase:
 ## Instructions
 1. <step 1>
 2. <step 2>
-3. Return structured output
+3. <step 3>
 
-## Output Format (REQUIRED)
+## MCP Protocol
 
----
-STATUS: success | partial | failed
+You have full access to MCP tools. Follow this protocol:
 
-SUMMARY:
-<What you accomplished>
+1. Start your task:
+   start_task({
+     workflow_id: "{workflow_id}",
+     name: "<task_name>",
+     goal: "<goal>",
+     caller_type: "subagent",
+     agent_name: "<agent>",
+     areas: ["<scope>"]
+   })
 
-ACHIEVEMENTS:
-- <Achievement 1>
+2. Log progress as you work:
+   - log_milestone({task_id, message, progress})
+   - log_decision({task_id, category, question, chosen, reasoning})
 
-DECISIONS:
-- Category: architecture | library | approach | scope
-  Question: <What was decided?>
-  Chosen: <Choice>
-  Reasoning: <Why>
+3. If blocked:
+   log_issue({task_id, type, description, requires_human_review: true})
 
-ISSUES:
-- Type: blocker | bug | dependency | unclear_requirement
-  Description: <Issue>
-  RequiresHuman: true | false
-
-PROGRESS: <0-100>
-
-FILES_MODIFIED:
-- <path/to/file.ts>
----
+4. Complete your task:
+   complete_task({
+     task_id,
+     status: "success" | "partial_success" | "failed",
+     outcome: { summary, achievements, limitations, next_steps }
+   })
 ```
 ```
 
@@ -219,19 +217,16 @@ FILES_MODIFIED:
 1. Read definition.md + workflow.md
 2. Verify workflow_id is valid
 
-### Execution (Hybrid Pattern)
+### Execution (Direct Pattern)
 
 For each phase:
-1. `start_task({workflow_id, caller_type: "orchestrator", ...})` → task_id
-2. Launch subagent via Task tool (include task_id in prompt)
-3. Receive structured output from subagent
-4. Parse output and call MCP:
-   - `log_decision()` for each decision
-   - `log_issue()` for each issue
-   - `log_milestone()` for progress
-5. `complete_task({task_id, status, outcome})`
-6. `get_context({include: ["blockers"]})` → check before next phase
-7. If blockers → STOP, request human help
+1. Launch subagent via Task tool (include workflow_id in prompt)
+2. Subagent manages own MCP calls:
+   - start_task() → task_id
+   - log_milestone(), log_decision(), log_issue()
+   - complete_task()
+3. Monitor via get_context({include: ["tasks", "blockers"]})
+4. If blockers with requires_human_review → STOP, request human help
 
 ### Completion
 `complete_workflow({workflow_id, status, summary, achievements})`
@@ -254,19 +249,10 @@ For each phase:
 - `state.md`, `context.md` - Same reason
 - `README.md` in workflow folder - Use start.md instead
 
-**NEVER include in subagent prompts:**
-- `start_task()` calls
-- `complete_task()` calls
-- `log_decision()`, `log_milestone()`, `log_issue()` calls
-- Any MCP tool references
-
-**ALWAYS include in subagent prompts:**
-- Structured output format (STATUS, SUMMARY, DECISIONS, ISSUES, etc.)
-- Task ID placeholder `{task_id}`
-
-**State management is 100% MCP-based via orchestrator:**
+**State management is 100% MCP-based:**
 ```
-Orchestrator: start_workflow → start_task → [subagent work] → parse output → log_* → complete_task
+Orchestrator: start_workflow → launch subagents → monitor → complete_workflow
+Subagent: start_task → work → log_* → complete_task
 ```
 
 ## Error Handling

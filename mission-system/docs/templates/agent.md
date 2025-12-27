@@ -2,7 +2,7 @@
 
 <instructions>
 For workflow-specific agents in /project/.claude/workflows/<name>/agents/
-IMPORTANT: Subagents CANNOT call MCP tools - they return structured output instead.
+Subagents have FULL MCP access - include MCP protocol in prompts.
 Delete this block after filling.
 </instructions>
 
@@ -10,7 +10,7 @@ Delete this block after filling.
 ---
 name: <agent-name>
 description: <When orchestrator should invoke this agent - be specific>
-tools: Read, Write, Grep, Glob  # Minimal set needed (NO MCP tools)
+tools: Read, Write, Grep, Glob  # Standard tools + MCP tools available
 model: sonnet  # sonnet|opus|haiku
 ---
 ```
@@ -21,8 +21,8 @@ model: sonnet  # sonnet|opus|haiku
 
 # Workflow Context
 **Workflow**: <workflow_name>
+**Workflow ID**: `{workflow_id}`
 **Phase**: <phase_number>
-**Task ID**: <task_id> (provided by orchestrator)
 
 # Your Task
 <Specific task for this agent within the workflow>
@@ -41,42 +41,48 @@ model: sonnet  # sonnet|opus|haiku
 1. <Step 1>
 2. <Step 2>
 3. <Step 3>
-4. Return structured output (see format below)
+4. Complete task via MCP
 
-# Output Format (REQUIRED)
+# MCP Protocol
 
-You MUST return this structured format. The orchestrator will parse it and log to MCP.
+You have full access to MCP tools. Follow this protocol:
 
----
-STATUS: success | partial | failed
+## 1. Start Task
+```
+start_task({
+  workflow_id: "{workflow_id}",
+  name: "<task_name>",
+  goal: "<goal>",
+  caller_type: "subagent",
+  agent_name: "<agent-name>",
+  areas: ["<scope>"]
+})
+```
 
-SUMMARY:
-<What you accomplished in 2-3 sentences>
+## 2. Log Progress (as you work)
+```
+log_milestone({task_id, message: "Completed X", progress: 50})
+log_decision({task_id, category: "architecture", question: "...", chosen: "...", reasoning: "..."})
+```
 
-ACHIEVEMENTS:
-- <Achievement 1>
-- <Achievement 2>
+## 3. If Blocked
+```
+log_issue({task_id, type: "blocker", description: "...", requires_human_review: true})
+```
 
-DECISIONS:
-- Category: architecture | library | approach | scope
-  Question: <What was the decision about?>
-  Chosen: <What was chosen>
-  Reasoning: <Why, 1-2 sentences>
-
-ISSUES:
-- Type: blocker | bug | dependency | unclear_requirement
-  Description: <What's the issue>
-  RequiresHuman: true | false
-
-PROGRESS: <0-100>
-
-FILES_MODIFIED:
-- <path/to/file1.ts>
-- <path/to/file2.ts>
-
-NEXT_STEPS:
-- <What should happen next>
----
+## 4. Complete Task
+```
+complete_task({
+  task_id,
+  status: "success" | "partial_success" | "failed",
+  outcome: {
+    summary: "What was accomplished",
+    achievements: ["..."],
+    limitations: ["..."],
+    next_steps: ["..."]
+  }
+})
+```
 ```
 
 ## Agent Design Principles
@@ -85,30 +91,28 @@ NEXT_STEPS:
 |-----------|----------------|
 | Single responsibility | One clear task per agent |
 | Minimal tools | Only tools needed for task |
-| **NO MCP calls** | Return structured output instead |
+| **Full MCP access** | Manage own task lifecycle |
 | Scope-bound | Never exceed defined scope |
-| Failure-explicit | Use ISSUES section for blockers |
+| Failure-explicit | Use log_issue() for blockers |
 
 ## Common Agent Types
 
-| Type | Purpose | Typical Tools | Output Focus |
-|------|---------|---------------|--------------|
-| Analyzer | Understand code/docs | Read, Grep, Glob | DECISIONS |
-| Implementer | Write/modify code | Read, Write, Edit, Bash | FILES_MODIFIED |
-| Reviewer | Validate quality | Read, Grep, Bash (tests) | ISSUES |
-| Documenter | Update docs | Read, Write | FILES_MODIFIED |
-| Tester | Run/write tests | Read, Write, Bash | ISSUES |
+| Type | Purpose | Typical Tools | MCP Focus |
+|------|---------|---------------|-----------|
+| Analyzer | Understand code/docs | Read, Grep, Glob | log_decision |
+| Implementer | Write/modify code | Read, Write, Edit, Bash | log_milestone |
+| Reviewer | Validate quality | Read, Grep, Bash (tests) | log_issue |
+| Documenter | Update docs | Read, Write | log_milestone |
+| Tester | Run/write tests | Read, Write, Bash | log_issue |
 
-## MCP Note
+## MCP Access
 
-**Subagents CANNOT call MCP tools** (known Claude Code limitation).
+**Subagents CAN call MCP tools directly.** Full access to all `mcp__mission-control__*` tools.
 
-Instead:
-1. Orchestrator calls `start_task()` and gets `task_id`
-2. Orchestrator passes `task_id` to subagent in prompt
-3. Subagent does work and returns structured output
-4. Orchestrator parses output and calls:
-   - `log_decision()` for each DECISION
-   - `log_issue()` for each ISSUE
-   - `log_milestone()` for PROGRESS
-   - `complete_task()` with SUMMARY/ACHIEVEMENTS
+Subagent MCP flow:
+1. Receive workflow_id from orchestrator (in prompt)
+2. `start_task()` → get task_id
+3. Do work with standard tools
+4. `log_milestone()`, `log_decision()` as you progress
+5. `log_issue()` if blocked
+6. `complete_task()` when done
