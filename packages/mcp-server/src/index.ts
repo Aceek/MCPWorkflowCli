@@ -21,10 +21,6 @@ import { ZodError } from 'zod'
 import { createLogger } from './utils/logger.js'
 
 // Import tool definitions and handlers
-import {
-  startWorkflowTool,
-  handleStartWorkflow,
-} from './tools/start-workflow.js'
 import { startTaskTool, handleStartTask } from './tools/start-task.js'
 import { logDecisionTool, handleLogDecision } from './tools/log-decision.js'
 import { logIssueTool, handleLogIssue } from './tools/log-issue.js'
@@ -87,8 +83,6 @@ function createServer(): Server {
   // Register tool list handler
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
     tools: [
-      // Legacy workflow tools
-      startWorkflowTool,
       // Mission system tools
       startMissionTool,
       completeMissionTool,
@@ -125,10 +119,6 @@ async function handleToolCall(
   args: unknown
 ): Promise<CallToolResult> {
   switch (name) {
-    // Legacy workflow
-    case 'start_workflow':
-      return handleStartWorkflow(args)
-
     // Mission system
     case 'start_mission':
       return handleStartMission(args)

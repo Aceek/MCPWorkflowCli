@@ -1,6 +1,6 @@
 # MCP Tools
 
-9 tools for mission orchestration and workflow tracking.
+8 tools for mission orchestration and workflow tracking.
 
 ## Overview
 
@@ -14,7 +14,6 @@
 | `log_decision` | Architectural decision | 0-3/task |
 | `log_issue` | Problem/blocker | 0-3/task |
 | `log_milestone` | Progress update | 0-5/task |
-| `start_workflow` | Legacy alias | deprecated |
 
 ## Mission Tools
 

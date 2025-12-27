@@ -35,14 +35,13 @@ start_task({ caller_type: 'orchestrator', phase: 1, ... })
 start_task({ caller_type: 'subagent', agent_name: 'feature-implementer', ... })
 ```
 
-## MCP Tools (9)
+## MCP Tools (8)
 
 | Category | Tools |
 |----------|-------|
 | Mission | `start_mission`, `complete_mission`, `get_context` |
 | Task | `start_task`, `complete_task` |
 | Logging | `log_decision`, `log_issue`, `log_milestone` |
-| Legacy | `start_workflow` (alias) |
 
 **Budget**: 3-6 MCP calls per task (no context flooding)
 
