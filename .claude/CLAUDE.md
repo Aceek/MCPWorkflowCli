@@ -57,10 +57,10 @@ Types: feat, fix, refactor, docs, test, chore
 
 | Document | When to Read |
 |----------|--------------|
-| `docs/architecture.md` | Modifying monorepo structure |
-| `docs/mcp-tools.md` | Implementing/modifying MCP tools |
-| `docs/database.md` | Modifying Prisma schema |
-| `docs/standards.md` | Always |
+| `.claude/docs/architecture.md` | Modifying monorepo structure |
+| `.claude/docs/mcp-tools.md` | Implementing/modifying MCP tools |
+| `.claude/docs/database.md` | Modifying Prisma schema |
+| `.claude/docs/standards.md` | Always |
 
 ## Pre-Commit Checklist
 
@@ -69,3 +69,26 @@ Types: feat, fix, refactor, docs, test, chore
 - [ ] Zod validation
 - [ ] Git snapshot logic (if complete_task)
 - [ ] Conventional commit message
+
+---
+
+## Active Workflow
+
+**Workflow**: code-quality-review
+**ID**: `<PENDING_start_workflow_call>`
+**Phases**: 3 (parallel execution in phases 1 and 2)
+**Path**: `.claude/workflows/code-quality-review/`
+
+### Workflow Commands
+- "start workflow" or "execute workflow" → Begin orchestrator execution
+- "workflow status" → `get_context({workflow_id, include: ["phase_summary"]})`
+- "continue workflow" → Resume from last completed phase
+- "abort workflow" → Fail workflow and document reason
+
+### Workflow Overview
+Comprehensive code quality review across all 3 packages:
+- Phase 1: Parallel analysis (SOLID, DRY, security, clean code)
+- Phase 2: Parallel correction (conventional commits, no Claude mentions)
+- Phase 3: Final validation review
+
+**IMPORTANT**: Before starting, you MUST call `start_workflow` MCP tool to obtain workflow_id, then update all workflow files with the actual workflow_id.
