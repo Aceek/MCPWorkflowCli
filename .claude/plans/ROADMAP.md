@@ -9,7 +9,7 @@
 | 3 | **MCP Tools Extension** | 8 simplified tools + phase auto-management | `completed` |
 | 4 | **Agent Adaptation** | Update agent prompts for MCP | `completed` |
 | 5 | **WebUI Adaptation** | Mission/Phase hierarchy views | `completed` |
-| 6 | **Setup Script** | Guided installation + verification | `pending` |
+| 6 | **Setup Script** | Guided installation + verification | `completed` |
 | 7 | **Documentation** | Update all docs for new system | `pending` |
 
 ---
@@ -305,51 +305,54 @@
 
 ---
 
-## Phase 6: Setup Script
+## Phase 6: Setup Script ✅
 
 **Goal**: One-command installation and verification
 
 ### 6.1 Prerequisites Check
-- [ ] Check Node.js version (20+)
-- [ ] Check pnpm installed
-- [ ] Check git installed
-- [ ] Provide install instructions if missing
+- [x] Check Node.js version (20+)
+- [x] Check pnpm installed
+- [x] Check git installed
+- [x] Provide install instructions if missing
 
 ### 6.2 Install Script (`setup.sh`)
-- [ ] Interactive mode (prompts) vs silent mode (flags)
-- [ ] Install dependencies (`pnpm install`)
-- [ ] Build project (`pnpm build`)
-- [ ] Run migrations (`pnpm prisma migrate deploy`)
-- [ ] Error handling with clear messages
+- [x] Interactive mode (prompts) vs silent mode (flags)
+- [x] Install dependencies (`pnpm install`)
+- [x] Build project (`pnpm build:all`)
+- [x] Run migrations (`pnpm db:migrate`)
+- [x] Error handling with clear messages
 
 ### 6.3 Symlink Script (`symlink.sh`)
-- [ ] Create `~/.claude/docs/mission-system/` symlink
-- [ ] Create `~/.claude/agents/mission-architect.md` symlink
-- [ ] Handle existing symlinks (update vs skip)
-- [ ] Verify symlinks created correctly
+- [x] Create `~/.claude/docs/mission-system/` symlink
+- [x] Create `~/.claude/agents/mission-architect.md` symlink
+- [x] Handle existing symlinks (update vs skip)
+- [x] Verify symlinks created correctly
+- [x] Add --remove flag for cleanup
 
 ### 6.4 MCP Configuration
-- [ ] Generate `.mcp.json` for user's project
-- [ ] Interactive: ask for project path
-- [ ] Template with correct paths to mission-control
-- [ ] Validate JSON syntax
+- [x] Generate `.mcp.json` for user's project
+- [x] Interactive: ask for project path
+- [x] Template with correct paths to mission-control
+- [x] Validate JSON syntax
 
 ### 6.5 Verification Script (`verify-mcp.sh`)
-- [ ] Start MCP server in test mode
-- [ ] Send test tool call
-- [ ] Verify response
-- [ ] Report success/failure with debug info
+- [x] Check MCP server binary exists
+- [x] Check database file
+- [x] Send initialize request to server
+- [x] List registered tools
+- [x] Report success/failure with debug info
 
 ### 6.6 Documentation
-- [ ] Update README with setup instructions
-- [ ] Add troubleshooting section
-- [ ] Add uninstall instructions
+- [x] Update README with setup instructions
+- [x] Add troubleshooting section
+- [x] Add uninstall instructions
+- [x] Add scripts reference table
 
 **Completion Criteria**:
-- `./scripts/setup.sh` works end-to-end
-- Symlinks created correctly
-- MCP verified and working
-- Clear error messages on failure
+- [x] `./scripts/setup.sh` works end-to-end
+- [x] Symlinks created correctly
+- [x] MCP verified and working
+- [x] Clear error messages on failure
 
 ---
 
@@ -412,7 +415,7 @@ Phase 2: Schema Extension      [■■■■■■■■■■] 100%
 Phase 3: MCP Tools Extension   [■■■■■■■■■■] 100%
 Phase 4: Agent Adaptation      [■■■■■■■■■■] 100%
 Phase 5: WebUI Adaptation      [■■■■■■■■■■] 100%
-Phase 6: Setup Script          [          ] 0%
+Phase 6: Setup Script          [■■■■■■■■■■] 100%
 Phase 7: Documentation         [          ] 0%
 ```
 
@@ -426,6 +429,7 @@ Phase 7: Documentation         [          ] 0%
 | 2024-12-27 | 3 | Implemented 9 MCP tools with mission/phase support | start_mission, complete_mission, get_context + extended start/complete_task |
 | 2024-12-27 | 4 | Updated mission-architect + created 3 new guides | orchestrator-guide.md, agent-integration.md, mcp-instructions.md + updated all templates |
 | 2024-12-27 | 5 | Created missions dashboard with real-time updates | API routes, components, pages, hooks for missions/phases |
+| 2024-12-27 | 6 | Implemented setup scripts and updated README | setup.sh, symlink.sh, generate-mcp-config.sh, verify-mcp.sh |
 
 ---
 
