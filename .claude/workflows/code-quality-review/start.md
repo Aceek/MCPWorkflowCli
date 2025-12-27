@@ -1,243 +1,225 @@
 # Start Workflow: Code Quality Review
 
-**Workflow ID**: `<PENDING_start_workflow_call>`
+**Workflow ID**: `<TO_BE_REGISTERED>`
 
 ## Orchestrator Protocol
 
-You are the orchestrator for a 3-phase workflow with parallel execution in phases 1 and 2.
+### Pre-Execution
 
-### Pre-Execution Checklist
-1. [ ] Read .claude/workflows/code-quality-review/definition.md
-2. [ ] Read .claude/workflows/code-quality-review/workflow.md
-3. [ ] Verify workflow_id is set (obtained from start_workflow MCP call)
-4. [ ] Understand scope isolation rules
+1. **Verify workflow registration**:
+   - If workflow_id is `<TO_BE_REGISTERED>`, call `start_workflow` first
+   - Update all workflow files with actual workflow_id
 
-### Execution Flow
+2. **Read workflow definition**:
+   - Read `definition.md` for objectives and constraints
+   - Read `workflow.md` for phase structure and agent prompts
 
-#### Phase 1: Parallel Analysis (3 agents)
+3. **Create reports directory**:
+   ```bash
+   mkdir -p .claude/workflows/code-quality-review/reports
+   ```
 
-```
-1. start_task({
-     workflow_id: "<workflow_id>",
-     phase: 1,
-     caller_type: "orchestrator",
-     name: "Phase 1: Parallel Quality Analysis",
-     goal: "Analyze all 3 packages for quality issues"
-   }) → task_id
+### Execution Sequence
 
-2. Launch 3 sub-agents IN PARALLEL (single message, 3 Task calls):
-   a. Task({
-        subagent_type: "general-purpose",
-        prompt: [quality-analyzer-mcp prompt from workflow.md]
-      })
-   b. Task({
-        subagent_type: "general-purpose",
-        prompt: [quality-analyzer-shared prompt from workflow.md]
-      })
-   c. Task({
-        subagent_type: "general-purpose",
-        prompt: [quality-analyzer-webui prompt from workflow.md]
-      })
-
-3. Wait for all 3 agents to complete
-
-4. complete_task({
-     task_id: "<task_id>",
-     status: "success",
-     outcome: {
-       summary: "All 3 packages analyzed",
-       achievements: [
-         "analysis-mcp-server.md created",
-         "analysis-shared.md created",
-         "analysis-web-ui.md created"
-       ]
-     },
-     phase_complete: true
-   })
-
-5. Check for blockers:
-   get_context({
-     workflow_id: "<workflow_id>",
-     include: ["blockers"],
-     filter: { phase: 1 }
-   })
-
-   IF blockers found → STOP and request human help
-```
-
-#### Phase 2: Parallel Correction (3 agents)
+#### Step 1: Register Workflow (if needed)
 
 ```
-1. start_task({
-     workflow_id: "<workflow_id>",
-     phase: 2,
-     caller_type: "orchestrator",
-     name: "Phase 2: Parallel Quality Correction",
-     goal: "Fix issues in all 3 packages with conventional commits"
-   }) → task_id
-
-2. Launch 3 sub-agents IN PARALLEL:
-   a. Task({
-        subagent_type: "general-purpose",
-        prompt: [quality-corrector-mcp prompt from workflow.md]
-      })
-   b. Task({
-        subagent_type: "general-purpose",
-        prompt: [quality-corrector-shared prompt from workflow.md]
-      })
-   c. Task({
-        subagent_type: "general-purpose",
-        prompt: [quality-corrector-webui prompt from workflow.md]
-      })
-
-3. Wait for all 3 agents to complete
-
-4. complete_task({
-     task_id: "<task_id>",
-     status: "success",
-     outcome: {
-       summary: "All 3 packages corrected",
-       achievements: [
-         "correction-report-mcp-server.md created",
-         "correction-report-shared.md created",
-         "correction-report-web-ui.md created",
-         "X conventional commits pushed"
-       ]
-     },
-     phase_complete: true
-   })
-
-5. Check for blockers:
-   get_context({
-     workflow_id: "<workflow_id>",
-     include: ["blockers"],
-     filter: { phase: 2 }
-   })
-
-   IF blockers found → STOP and request human help
+start_workflow({
+  name: "code-quality-review",
+  objective: "Perform comprehensive code quality analysis and remediation across all packages",
+  profile: "STANDARD",
+  total_phases: 3,
+  scope: "packages/mcp-server, packages/shared, packages/web-ui (TypeScript files only)",
+  constraints: "Conventional commits, atomic changes, no Claude Code mentions"
+})
 ```
 
-#### Phase 3: Final Review (1 agent)
+Store returned `workflow_id` and update all workflow files.
 
+#### Step 2: Phase 1 - Analysis (Parallel)
+
+Launch 3 sub-agents in parallel using Task tool:
+
+**Task 1: mcp-server-analyzer**
 ```
-1. start_task({
-     workflow_id: "<workflow_id>",
-     phase: 3,
-     caller_type: "orchestrator",
-     name: "Phase 3: Final Quality Review",
-     goal: "Validate all corrections meet success criteria"
-   }) → task_id
-
-2. Launch quality-reviewer agent:
-   Task({
-     subagent_type: "general-purpose",
-     prompt: [quality-reviewer prompt from workflow.md]
-   })
-
-3. Wait for agent to complete
-
-4. complete_task({
-     task_id: "<task_id>",
-     status: "success",
-     outcome: {
-       summary: "Final review completed",
-       achievements: ["final-quality-report.md created", "All success criteria validated"]
-     },
-     phase_complete: true
-   })
-
-5. Check for blockers:
-   get_context({
-     workflow_id: "<workflow_id>",
-     include: ["blockers"],
-     filter: { phase: 3 }
-   })
-
-   IF blockers found → STOP and request human help
+Use Task tool with subagent_type: "general-purpose"
+Provide full agent prompt from workflow.md Phase 1 Agent 1
+Replace <TO_BE_REGISTERED> with actual workflow_id
 ```
 
-#### Workflow Completion
+**Task 2: shared-analyzer**
+```
+Use Task tool with subagent_type: "general-purpose"
+Provide full agent prompt from workflow.md Phase 1 Agent 2
+Replace <TO_BE_REGISTERED> with actual workflow_id
+```
+
+**Task 3: web-ui-analyzer**
+```
+Use Task tool with subagent_type: "general-purpose"
+Provide full agent prompt from workflow.md Phase 1 Agent 3
+Replace <TO_BE_REGISTERED> with actual workflow_id
+```
+
+**Wait for completion**: All 3 agents must complete before proceeding.
+
+**Verify Phase 1 completion**:
+- [ ] .claude/workflows/code-quality-review/reports/mcp-server-analysis.md exists
+- [ ] .claude/workflows/code-quality-review/reports/shared-analysis.md exists
+- [ ] .claude/workflows/code-quality-review/reports/web-ui-analysis.md exists
+
+**Check for blockers**:
+```
+get_context({
+  workflow_id: "<workflow_id>",
+  include: ["blockers"],
+  filter: { phase: 1 }
+})
+```
+
+If blockers found → Request human review → HALT.
+
+#### Step 3: Phase 2 - Corrections (Parallel)
+
+Launch 3 sub-agents in parallel using Task tool:
+
+**Task 1: mcp-server-fixer**
+```
+Use Task tool with subagent_type: "general-purpose"
+Provide full agent prompt from workflow.md Phase 2 Agent 1
+Replace <TO_BE_REGISTERED> with actual workflow_id
+```
+
+**Task 2: shared-fixer**
+```
+Use Task tool with subagent_type: "general-purpose"
+Provide full agent prompt from workflow.md Phase 2 Agent 2
+Replace <TO_BE_REGISTERED> with actual workflow_id
+```
+
+**Task 3: web-ui-fixer**
+```
+Use Task tool with subagent_type: "general-purpose"
+Provide full agent prompt from workflow.md Phase 2 Agent 3
+Replace <TO_BE_REGISTERED> with actual workflow_id
+```
+
+**Wait for completion**: All 3 agents must complete before proceeding.
+
+**Verify Phase 2 completion**:
+```bash
+git log --oneline -20  # Verify atomic commits created
+```
+
+**Check for blockers**:
+```
+get_context({
+  workflow_id: "<workflow_id>",
+  include: ["blockers"],
+  filter: { phase: 2 }
+})
+```
+
+If blockers found → Request human review → HALT.
+
+#### Step 4: Phase 3 - Final Review (Sequential)
+
+Launch single sub-agent using Task tool:
+
+**Task: quality-reviewer**
+```
+Use Task tool with subagent_type: "general-purpose"
+Provide full agent prompt from workflow.md Phase 3 Agent
+Replace <TO_BE_REGISTERED> with actual workflow_id
+```
+
+**Wait for completion**.
+
+**Verify Phase 3 completion**:
+- [ ] .claude/workflows/code-quality-review/final-review.md exists
+- [ ] Final review status is APPROVED
+
+**Check for blockers**:
+```
+get_context({
+  workflow_id: "<workflow_id>",
+  include: ["blockers"],
+  filter: { phase: 3 }
+})
+```
+
+If NOT APPROVED or blockers found → Request human review → HALT.
+
+#### Step 5: Complete Workflow
 
 ```
 complete_workflow({
   workflow_id: "<workflow_id>",
   status: "completed",
-  summary: "Comprehensive code quality review completed across all 3 packages with X issues identified and Y corrected",
+  summary: "Code quality review completed across 3 packages. Critical and high-priority issues addressed with atomic commits.",
   achievements: [
-    "3 detailed analysis reports",
-    "3 correction reports with conventional commits",
-    "Final quality validation approved",
-    "All tests passing",
-    "Zero Claude Code mentions in commits"
+    "Analyzed X files across 3 packages",
+    "Fixed Y critical/high priority issues",
+    "Reduced code duplication by Z%",
+    "Created N atomic commits following conventions",
+    "Validated cross-package consistency"
+  ],
+  limitations: [
+    "Medium/low priority issues deferred to future iterations"
   ]
 })
 ```
 
 ### Error Handling
 
-**If any sub-agent reports failure:**
-1. Read their error summary
-2. Determine if retry possible or human intervention needed
-3. If critical blocker → log_issue and STOP
-4. If recoverable → retry with adjusted parameters
+**If any agent fails**:
+1. Review agent output and error messages
+2. Check `get_context({include: ["blockers"]})` for details
+3. If recoverable → Restart failed agent
+4. If not recoverable → `complete_workflow({status: "failed", summary: "..."})`
 
-**If tests fail in Phase 2:**
-1. Sub-agent must log_issue with requires_human_review: true
-2. Orchestrator detects via get_context
-3. STOP and request human to review test failures
+**If breaking changes detected**:
+1. Agent should use `log_issue({requires_human_review: true})`
+2. Orchestrator halts workflow
+3. Request human decision before proceeding
 
-**If final review shows NEEDS_REVISION:**
-1. Orchestrator reads final-quality-report.md
-2. Determines if additional correction phase needed
-3. Consults human for next steps
+### Context Queries
 
-### Context Management
+**Phase summary**:
+```
+get_context({
+  workflow_id: "<workflow_id>",
+  include: ["phase_summary"]
+})
+```
 
-- This is a 3-phase workflow with parallelism
-- NO /clear needed (total context manageable)
-- Each sub-agent queries only their relevant context
-- Orchestrator tracks phase completion via complete_task
+**All decisions made**:
+```
+get_context({
+  workflow_id: "<workflow_id>",
+  include: ["decisions"]
+})
+```
 
-### Validation Before Start
+**Key milestones**:
+```
+get_context({
+  workflow_id: "<workflow_id>",
+  include: ["milestones"]
+})
+```
 
-CRITICAL CHECKS:
-- [ ] workflow_id obtained from start_workflow call
-- [ ] All definition.md and workflow.md files have workflow_id populated
-- [ ] Git repository is clean (no uncommitted changes from previous work)
-- [ ] Tests currently pass (baseline)
+### Human Checkpoints
 
-### Orchestrator Responsibilities
+Request human review at:
+1. After Phase 1 if critical security issues found
+2. After Phase 2 if breaking changes required
+3. After Phase 3 if final review is NOT APPROVED
 
-**YOU MUST:**
-- Read definition.md and workflow.md at start
-- Execute phases sequentially (1 → 2 → 3)
-- Launch parallel agents within phases 1 and 2
-- Track each phase with start_task and complete_task
-- Check for blockers after each phase
-- NEVER delegate orchestration to sub-agents
-- Call complete_workflow when all phases done
+## Notes
 
-**YOU MUST NOT:**
-- Skip phases
-- Allow sub-agents to work outside their scope
-- Continue if blockers detected
-- Modify workflow scope without human approval
-
-### MCP Call Budget
-
-Expected MCP calls by orchestrator:
-- Phase 1: start_task + complete_task + get_context (blockers) = 3 calls
-- Phase 2: start_task + complete_task + get_context (blockers) = 3 calls
-- Phase 3: start_task + complete_task + get_context (blockers) = 3 calls
-- Workflow end: complete_workflow = 1 call
-
-Total: ~10 MCP calls by orchestrator
-Sub-agents: ~3-5 calls each (start_task, log_milestone, complete_task)
-
-### Ready to Execute?
-
-When human says "start workflow" or "execute workflow":
-1. Verify workflow_id is set in all files
-2. Begin with Phase 1 per protocol above
-3. Report progress after each phase
-4. Request human review if any blockers detected
+- All agents use `subagent_type: "general-purpose"` (they write files)
+- Phases 1 and 2 run agents in parallel for efficiency
+- Phase 3 is sequential (requires Phase 2 completion)
+- State management is 100% via MCP tools (no memory.md)
+- Budget: ~18 MCP calls total (3 per phase × 3 agents + workflow start/complete + context queries)

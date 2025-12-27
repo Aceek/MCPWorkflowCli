@@ -1,49 +1,63 @@
 # Workflow: Code Quality Review
 
-**Workflow ID**: `<PENDING_start_workflow_call>`
-**Created**: 2025-12-27
+**Workflow ID**: `<TO_BE_REGISTERED>`
 
 ## Objective
-Comprehensive code quality audit and remediation across all packages (mcp-server, shared, web-ui) following SOLID principles, DRY, security best practices, and clean code standards.
+
+Perform comprehensive code quality analysis and remediation across all packages in the monorepo, ensuring adherence to SOLID principles, DRY, security best practices, and clean code standards.
 
 ## Scope
+
 | Include | Exclude |
 |---------|---------|
-| `packages/mcp-server/` (tools, websocket, utils) | node_modules, build artifacts |
-| `packages/shared/` (Prisma schema, types) | Generated Prisma client |
-| `packages/web-ui/` (components, hooks, lib, api) | .next, public assets |
-| TypeScript/JavaScript source files | Documentation, config files |
+| `packages/mcp-server/src/**/*.ts` | Generated files (Prisma client) |
+| `packages/shared/src/**/*.ts` | `node_modules/` |
+| `packages/web-ui/src/**/*.ts` | Build artifacts (`dist/`, `.next/`) |
+| TypeScript source files only | Configuration files |
+| All business logic, utilities, components | Test files (analyzed but not modified) |
+
+## Analysis Criteria
+
+1. **SOLID Principles**
+   - Single Responsibility: Each module has one clear purpose
+   - Open/Closed: Extensible without modification
+   - Liskov Substitution: Proper inheritance hierarchies
+   - Interface Segregation: Focused interfaces
+   - Dependency Inversion: Depend on abstractions
+
+2. **DRY (Don't Repeat Yourself)**
+   - Identify code duplication
+   - Extract common utilities
+   - Shared types and interfaces
+
+3. **Security Vulnerabilities**
+   - Hardcoded secrets
+   - SQL injection risks
+   - Unsafe file operations
+   - Input validation gaps
+
+4. **Clean Code**
+   - File length (<400 lines)
+   - Function size (<50 lines)
+   - Clear naming conventions
+   - Proper error handling
+   - Consistent formatting
 
 ## Constraints
-- Conventional commits in English (no Claude Code mentions)
-- Preserve all existing functionality
-- No breaking changes to public APIs
-- TypeScript strict mode compliance
-- Regular commits during corrections (atomic changes)
-- Each service corrected independently (no cross-contamination)
+
+- **Git commits**: Conventional commits format, English only
+- **No Claude Code mentions**: Remove all references in commits/code
+- **Atomic commits**: One logical change per commit
+- **Preserve functionality**: No breaking changes without justification
+- **TypeScript strict mode**: Maintain `strict: true` compliance
+- **Package boundaries**: Respect architecture (no forbidden imports)
 
 ## Success Criteria
-- [ ] All 3 services analyzed with detailed reports
-- [ ] SOLID violations identified and categorized
-- [ ] DRY violations identified and categorized
-- [ ] Security issues flagged and prioritized
-- [ ] Code smells (long files, SRP violations) documented
-- [ ] All identified issues corrected with tests passing
-- [ ] Final quality review validates all corrections
-- [ ] Git history shows conventional commits only
 
-## Context
-This is a monorepo using:
-- Prisma for database (packages/shared)
-- MCP server protocol (packages/mcp-server)
-- Next.js 14 App Router (packages/web-ui)
-
-Quality standards:
-- SOLID: Single Responsibility, Open/Closed, Liskov Substitution, Interface Segregation, Dependency Inversion
-- DRY: Don't Repeat Yourself
-- Security: Input validation, SQL injection prevention, XSS prevention
-- Clean Code: Meaningful names, small functions, clear intent
-
-## References
-- `.claude/docs/standards.md`
-- `.claude/docs/architecture.md`
+- [ ] All packages analyzed with detailed reports
+- [ ] High-priority issues fixed (security, SOLID violations)
+- [ ] Code duplication reduced by >30%
+- [ ] All files comply with clean code metrics
+- [ ] No regression in existing tests
+- [ ] Atomic commits following conventions
+- [ ] Final review validates consistency across packages

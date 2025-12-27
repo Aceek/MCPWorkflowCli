@@ -121,3 +121,9 @@ If folder does NOT exist → invoke `workflow-architect` agent first.
 | "workflow status" | `get_context({workflow_id, include: ["phase_summary"]})` |
 | "continue workflow" | Resume from last completed phase |
 | "abort workflow" | Fail workflow and document reason |
+
+## Available Workflows
+
+| Workflow | Path | Description |
+|----------|------|-------------|
+| `code-quality-review` | `.claude/workflows/code-quality-review/` | Analyze and fix code quality issues across all packages (SOLID, DRY, security, clean code) |
