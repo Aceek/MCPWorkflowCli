@@ -8,11 +8,11 @@ const logger = createLogger('api-workflows')
 export const dynamic = 'force-dynamic'
 
 // Status string constants (SQLite stores enums as strings)
-type WorkflowStatus = 'IN_PROGRESS' | 'COMPLETED' | 'FAILED'
+type WorkflowStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'FAILED' | 'BLOCKED'
 
 // Zod schema for status validation
 const statusSchema = z
-  .enum(['all', 'IN_PROGRESS', 'COMPLETED', 'FAILED'])
+  .enum(['all', 'PENDING', 'IN_PROGRESS', 'COMPLETED', 'FAILED', 'BLOCKED'])
   .optional()
   .default('all')
 
@@ -40,22 +40,34 @@ export async function GET(request: Request) {
       prisma.workflow.findMany({
         where,
         include: {
+          phases: {
+            include: {
+              _count: {
+                select: { tasks: true },
+              },
+            },
+            orderBy: { number: 'asc' },
+          },
           _count: {
-            select: { tasks: true },
+            select: { tasks: true, phases: true },
           },
         },
         orderBy: { createdAt: 'desc' },
       }),
       Promise.all([
         prisma.workflow.count(),
+        prisma.workflow.count({ where: { status: 'PENDING' } }),
         prisma.workflow.count({ where: { status: 'IN_PROGRESS' } }),
         prisma.workflow.count({ where: { status: 'COMPLETED' } }),
         prisma.workflow.count({ where: { status: 'FAILED' } }),
-      ]).then(([total, inProgress, completed, failed]) => ({
+        prisma.workflow.count({ where: { status: 'BLOCKED' } }),
+      ]).then(([total, pending, inProgress, completed, failed, blocked]) => ({
         total,
+        pending,
         inProgress,
         completed,
         failed,
+        blocked,
       })),
     ])
 

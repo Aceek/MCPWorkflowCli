@@ -15,9 +15,10 @@ interface BlockerAlertProps {
       phaseId: string | null
     }
   })[]
+  workflowId: string
 }
 
-export function BlockerAlert({ blockers }: BlockerAlertProps) {
+export function BlockerAlert({ blockers, workflowId }: BlockerAlertProps) {
   if (blockers.length === 0) return null
 
   return (
@@ -56,7 +57,7 @@ export function BlockerAlert({ blockers }: BlockerAlertProps) {
                   )}
                 </div>
                 <Link
-                  href={`/workflow/${blocker.task.id}`}
+                  href={`/workflow/${workflowId}`}
                   className="text-amber-600 hover:text-amber-800 dark:text-amber-400 dark:hover:text-amber-200"
                 >
                   <ExternalLink className="h-4 w-4" />

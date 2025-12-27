@@ -5,17 +5,28 @@
  * error handling, and logging.
  */
 
-import type { Workflow, Mission, Phase, Task, Issue } from '@prisma/client'
+import type { Workflow, Phase, Task, Issue } from '@prisma/client'
 import { createLogger } from './logger'
 
 const logger = createLogger('api')
 
 /**
- * Workflow with task count
+ * Phase with task count
  */
-export type WorkflowWithCount = Workflow & {
+export type PhaseWithCount = Phase & {
   _count: {
     tasks: number
+  }
+}
+
+/**
+ * Workflow with phases and task count
+ */
+export type WorkflowWithCount = Workflow & {
+  phases?: PhaseWithCount[]
+  _count: {
+    tasks: number
+    phases?: number
   }
 }
 
@@ -26,9 +37,11 @@ export interface WorkflowsResponse {
   workflows: WorkflowWithCount[]
   stats: {
     total: number
+    pending: number
     inProgress: number
     completed: number
     failed: number
+    blocked: number
   }
   timestamp: string
 }
@@ -99,7 +112,7 @@ export async function fetchWebSocketPort(): Promise<number | null> {
 }
 
 // ============================================
-// Mission Types
+// Phase and Task Types (for Workflow detail)
 // ============================================
 
 /**
@@ -127,36 +140,21 @@ export type TaskWithCounts = Task & {
 }
 
 /**
- * Mission with phases and counts
+ * Workflow with phases and full details
  */
-export type MissionWithPhases = Mission & {
+export type WorkflowWithPhases = Workflow & {
   phases: PhaseWithStats[]
   _count: {
+    tasks: number
     phases: number
   }
 }
 
 /**
- * Missions response structure
+ * Workflow detail response structure
  */
-export interface MissionsResponse {
-  missions: MissionWithPhases[]
-  stats: {
-    total: number
-    pending: number
-    inProgress: number
-    completed: number
-    failed: number
-    blocked: number
-  }
-  timestamp: string
-}
-
-/**
- * Mission detail response structure
- */
-export interface MissionDetailResponse {
-  mission: MissionWithPhases
+export interface WorkflowDetailResponse {
+  workflow: WorkflowWithPhases
   blockers: (Issue & {
     task: {
       id: string
@@ -168,49 +166,24 @@ export interface MissionDetailResponse {
 }
 
 /**
- * Fetch missions from API with optional status filter
+ * Fetch a single workflow with phases and blockers
  */
-export async function fetchMissions(status?: string): Promise<MissionsResponse> {
-  const params = new URLSearchParams()
-  if (status && status !== 'all') {
-    params.set('status', status)
-  }
-
-  const url = `/api/missions${params.toString() ? `?${params.toString()}` : ''}`
-  logger.debug('Fetching missions', { url, status })
-
-  const response = await fetch(url)
-  if (!response.ok) {
-    const error = `Failed to fetch missions: ${response.status}`
-    logger.error(error, { status: response.status, statusText: response.statusText })
-    throw new Error(error)
-  }
-
-  const data = (await response.json()) as MissionsResponse
-  logger.debug('Missions fetched successfully', { count: data.missions.length })
-
-  return data
-}
-
-/**
- * Fetch a single mission with phases and blockers
- */
-export async function fetchMission(id: string): Promise<MissionDetailResponse> {
-  const url = `/api/missions/${id}`
-  logger.debug('Fetching mission', { url, id })
+export async function fetchWorkflow(id: string): Promise<WorkflowDetailResponse> {
+  const url = `/api/workflows/${id}`
+  logger.debug('Fetching workflow', { url, id })
 
   const response = await fetch(url)
   if (!response.ok) {
     if (response.status === 404) {
-      throw new Error('Mission not found')
+      throw new Error('Workflow not found')
     }
-    const error = `Failed to fetch mission: ${response.status}`
+    const error = `Failed to fetch workflow: ${response.status}`
     logger.error(error, { status: response.status, statusText: response.statusText })
     throw new Error(error)
   }
 
-  const data = (await response.json()) as MissionDetailResponse
-  logger.debug('Mission fetched successfully', { id: data.mission.id })
+  const data = (await response.json()) as WorkflowDetailResponse
+  logger.debug('Workflow fetched successfully', { id: data.workflow.id })
 
   return data
 }

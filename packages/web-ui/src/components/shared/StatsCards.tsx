@@ -3,10 +3,11 @@
 import { motion } from 'framer-motion'
 import {
   LayoutGrid,
+  Circle,
   Loader2,
   CheckCircle2,
   XCircle,
-  TrendingUp,
+  AlertTriangle,
 } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 import { AnimatedCounter } from '@/components/ui/motion'
@@ -15,9 +16,11 @@ import { cn } from '@/lib/utils'
 interface StatsCardsProps {
   stats: {
     total: number
+    pending: number
     inProgress: number
     completed: number
     failed: number
+    blocked: number
   }
 }
 
@@ -49,12 +52,12 @@ export function StatsCards({ stats }: StatsCardsProps) {
       iconColor: 'text-[hsl(var(--success))]',
     },
     {
-      label: 'Failed',
-      value: stats.failed,
-      icon: XCircle,
-      color: 'text-[hsl(var(--destructive))]',
-      iconBg: 'bg-[hsl(var(--destructive)/0.1)]',
-      iconColor: 'text-[hsl(var(--destructive))]',
+      label: 'Blocked',
+      value: stats.blocked,
+      icon: AlertTriangle,
+      color: 'text-amber-500',
+      iconBg: 'bg-amber-50 dark:bg-amber-950',
+      iconColor: 'text-amber-500',
     },
   ]
 

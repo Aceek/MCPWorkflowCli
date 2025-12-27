@@ -2,6 +2,7 @@
 
 import { Badge, type BadgeProps } from '@/components/ui/badge'
 import {
+  Circle,
   Loader2,
   CheckCircle2,
   XCircle,
@@ -10,7 +11,7 @@ import {
 import { cn } from '@/lib/utils'
 
 // Status string constants (SQLite stores enums as strings)
-type KnownStatus = 'IN_PROGRESS' | 'COMPLETED' | 'SUCCESS' | 'PARTIAL_SUCCESS' | 'FAILED'
+type KnownStatus = 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'SUCCESS' | 'PARTIAL_SUCCESS' | 'FAILED' | 'BLOCKED'
 
 interface StatusBadgeProps {
   status: string  // Accept any string from DB, handle unknown gracefully
@@ -27,6 +28,11 @@ const statusConfig: Record<
     icon: React.ReactNode
   }
 > = {
+  PENDING: {
+    label: 'Pending',
+    variant: 'secondary',
+    icon: <Circle className="h-3 w-3" />,
+  },
   IN_PROGRESS: {
     label: 'In Progress',
     variant: 'in-progress',
@@ -51,6 +57,11 @@ const statusConfig: Record<
     label: 'Failed',
     variant: 'failed',
     icon: <XCircle className="h-3 w-3" />,
+  },
+  BLOCKED: {
+    label: 'Blocked',
+    variant: 'destructive',
+    icon: <AlertTriangle className="h-3 w-3" />,
   },
 }
 

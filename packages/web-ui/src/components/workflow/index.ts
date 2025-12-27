@@ -1,3 +1,7 @@
 export { WorkflowCard } from './WorkflowCard'
 export { RealtimeWorkflowList } from './RealtimeWorkflowList'
 export { RealtimeWorkflowDetail } from './RealtimeWorkflowDetail'
+export { AgentBadge } from './AgentBadge'
+export { BlockerAlert } from './BlockerAlert'
+export { PhaseCard } from './PhaseCard'
+export { PhaseTimeline } from './PhaseTimeline'

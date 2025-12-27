@@ -7,9 +7,11 @@ import { fetchWorkflows, type WorkflowsResponse, type WorkflowWithCount } from '
 
 interface Stats {
   total: number
+  pending: number
   inProgress: number
   completed: number
   failed: number
+  blocked: number
 }
 
 interface WorkflowCreatedEvent {
@@ -42,9 +44,11 @@ export function useRealtimeWorkflows(options: UseRealtimeWorkflowsOptions = {}) 
   const [workflows, setWorkflows] = useState<WorkflowWithCount[]>([])
   const [stats, setStats] = useState<Stats>({
     total: 0,
+    pending: 0,
     inProgress: 0,
     completed: 0,
     failed: 0,
+    blocked: 0,
   })
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<Error | null>(null)

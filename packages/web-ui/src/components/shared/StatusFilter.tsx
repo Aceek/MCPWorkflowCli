@@ -6,9 +6,11 @@ import { cn } from '@/lib/utils'
 
 const statuses: { value: string; label: string }[] = [
   { value: 'all', label: 'All' },
+  { value: 'PENDING', label: 'Pending' },
   { value: 'IN_PROGRESS', label: 'In Progress' },
   { value: 'COMPLETED', label: 'Completed' },
   { value: 'FAILED', label: 'Failed' },
+  { value: 'BLOCKED', label: 'Blocked' },
 ]
 
 export function StatusFilter() {
