@@ -8,9 +8,9 @@ Lance tous les checks de qualité de code sur le monorepo pnpm.
 
 ## Packages du monorepo
 
-- `@mcp-tracker/shared` - Types Prisma partagés
-- `@mcp-tracker/mcp-server` - Serveur MCP (Phase 1)
-- `@mcp-tracker/web-ui` - Interface Next.js (Phase 2)
+- `@mission-control/shared` - Types Prisma partagés
+- `@mission-control/mcp-server` - Serveur MCP
+- `@mission-control/web-ui` - Interface Next.js
 
 ## Checks effectués
 
@@ -25,11 +25,11 @@ Tu dois exécuter les checks suivants **en parallèle** pour maximiser la perfor
 
 ### TypeScript - Tous les packages
 ```bash
-# mcp-server (package principal Phase 1)
-pnpm --filter @mcp-tracker/mcp-server exec tsc --noEmit
+# mcp-server
+pnpm --filter @mission-control/mcp-server exec tsc --noEmit
 
 # shared (types Prisma)
-pnpm --filter @mcp-tracker/shared exec tsc --noEmit
+pnpm --filter @mission-control/shared exec tsc --noEmit
 ```
 
 ### Diagnostics IDE

@@ -10,7 +10,7 @@ importers:
 
   packages/mcp-server:
     dependencies:
-      '@mcp-tracker/shared':
+      '@mission-control/shared':
         specifier: workspace:*
         version: link:../shared
       '@modelcontextprotocol/sdk':
@@ -63,7 +63,7 @@ importers:
 
   packages/web-ui:
     dependencies:
-      '@mcp-tracker/shared':
+      '@mission-control/shared':
         specifier: workspace:*
         version: link:../shared
       '@prisma/client':

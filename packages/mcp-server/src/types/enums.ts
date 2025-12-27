@@ -4,7 +4,7 @@
  * This module centralizes the conversion between MCP input formats (snake_case)
  * and application enums (SCREAMING_CASE).
  *
- * SQLite stores enums as strings. Type safety is provided by @mcp-tracker/shared.
+ * SQLite stores enums as strings. Type safety is provided by @mission-control/shared.
  */
 
 import {
@@ -13,7 +13,7 @@ import {
   DecisionCategory,
   IssueType,
   TestsStatus,
-} from '@mcp-tracker/shared'
+} from '@mission-control/shared'
 
 // ============================================
 // CONVERSION MAPS (MCP Input -> Prisma Enum)

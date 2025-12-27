@@ -5,7 +5,7 @@
  * These constants are shared across all packages (mcp-server, web-ui).
  *
  * @packageDocumentation
- * @module @mcp-tracker/shared/constants
+ * @module @mission-control/shared/constants
  */
 
 // ============================================
@@ -151,8 +151,8 @@ export const TESTS_STATUS_COLORS: Record<string, string> = {
 /**
  * MCP Server metadata
  */
-export const MCP_SERVER_NAME = 'mcp-workflow-tracker'
-export const MCP_SERVER_VERSION = '1.0.0'
+export const MCP_SERVER_NAME = 'mission-control'
+export const MCP_SERVER_VERSION = '0.1.0'
 
 /**
  * Maximum values for tracking

@@ -1,7 +1,7 @@
 {
-  "name": "@mcp-tracker/shared",
-  "version": "1.0.0",
-  "description": "Shared types and Prisma schema for MCP Workflow Tracker",
+  "name": "@mission-control/shared",
+  "version": "0.1.0",
+  "description": "Shared types and Prisma schema for Mission Control",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

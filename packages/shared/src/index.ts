@@ -1,8 +1,8 @@
 /**
- * Shared package for MCP Workflow Tracker
+ * Shared package for Mission Control
  *
  * @packageDocumentation
- * @module @mcp-tracker/shared
+ * @module @mission-control/shared
  *
  * @description
  * This package serves as the **source of truth** for all database types and schemas
@@ -23,7 +23,7 @@
  *
  * @example
  * ```typescript
- * import { PrismaClient, WorkflowStatus, TaskStatus } from '@mcp-tracker/shared'
+ * import { PrismaClient, WorkflowStatus, TaskStatus } from '@mission-control/shared'
  *
  * const prisma = new PrismaClient()
  *

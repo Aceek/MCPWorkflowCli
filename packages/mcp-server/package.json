@@ -1,7 +1,7 @@
 {
-  "name": "@mcp-tracker/mcp-server",
-  "version": "1.0.0",
-  "description": "MCP Server for workflow tracking",
+  "name": "@mission-control/mcp-server",
+  "version": "0.1.0",
+  "description": "MCP Server for mission orchestration and workflow tracking",
   "main": "./dist/index.js",
   "type": "module",
   "scripts": {
@@ -10,7 +10,7 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
-    "@mcp-tracker/shared": "workspace:*",
+    "@mission-control/shared": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.0.0",
     "@prisma/client": "^5.22.0",
     "glob": "^11.0.0",

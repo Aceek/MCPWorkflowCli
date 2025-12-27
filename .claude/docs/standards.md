@@ -587,7 +587,7 @@ export async function computeGitDiff(task: Task): Promise<GitDiffResult> {
 // packages/mcp-server/package.json
 {
   "dependencies": {
-    "@mcp-tracker/shared": "workspace:*"
+    "@mission-control/shared": "workspace:*"
   }
 }
 ```

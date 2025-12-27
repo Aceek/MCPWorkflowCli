@@ -1,16 +1,16 @@
 {
-  "name": "mcp-workflow-tracker",
-  "version": "1.0.0",
-  "description": "Observability system for agentic workflows capturing intention, reasoning and code modifications",
+  "name": "mission-control",
+  "version": "0.1.0",
+  "description": "Orchestration + Observability for Agentic Workflows - Multi-agent mission system with MCP tracking",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev:mcp": "pnpm --filter @mcp-tracker/mcp-server dev",
-    "dev:ui": "pnpm --filter @mcp-tracker/web-ui dev",
-    "build:all": "pnpm --filter @mcp-tracker/shared build && pnpm --filter @mcp-tracker/mcp-server build",
-    "db:migrate": "pnpm --filter @mcp-tracker/shared prisma:migrate",
-    "db:generate": "pnpm --filter @mcp-tracker/shared prisma:generate",
-    "db:studio": "pnpm --filter @mcp-tracker/shared prisma:studio"
+    "dev:mcp": "pnpm --filter @mission-control/mcp-server dev",
+    "dev:ui": "pnpm --filter @mission-control/web-ui dev",
+    "build:all": "pnpm --filter @mission-control/shared build && pnpm --filter @mission-control/mcp-server build",
+    "db:migrate": "pnpm --filter @mission-control/shared prisma:migrate",
+    "db:generate": "pnpm --filter @mission-control/shared prisma:generate",
+    "db:studio": "pnpm --filter @mission-control/shared prisma:studio"
   },
   "keywords": [
     "mcp",

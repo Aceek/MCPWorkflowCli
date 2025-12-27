@@ -5,7 +5,7 @@
  * These schemas ensure type-safe validation at the application boundaries (e.g., MCP tool inputs).
  *
  * @packageDocumentation
- * @module @mcp-tracker/shared/schemas
+ * @module @mission-control/shared/schemas
  */
 
 import { z } from 'zod'
