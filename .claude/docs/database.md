@@ -1,587 +1,591 @@
 # Database Schema
 
-## Vue d'ensemble
+## Overview
 
-Le schéma utilise **Prisma ORM** avec **SQLite** comme base de données.
+Mission Control uses **Prisma ORM** with **SQLite** as the database.
 
-**Caractéristiques** :
-- Fichier local portable (pas de serveur DB requis)
-- Enums Prisma stockés comme TEXT avec validation app-side
-- Arrays stockés comme JSON strings
-- Type safety TypeScript conservé via le client Prisma généré
+**Characteristics:**
+- Local portable file (no external DB server required)
+- Enums stored as TEXT with app-side validation
+- Arrays stored as JSON strings
+- TypeScript type safety via generated Prisma client
 
 ---
 
-## Schéma Prisma Complet
+## Model Hierarchy
+
+```
+Mission
+├── Phase (1..n)
+│   └── Task (0..n)
+│       ├── Decision (0..n)
+│       ├── Issue (0..n)
+│       └── Milestone (0..n)
+
+Workflow (legacy)
+└── Task (0..n)
+    ├── Decision
+    ├── Issue
+    └── Milestone
+```
+
+---
+
+## Prisma Schema
+
+### Enums (Type Safety)
 
 ```prisma
-// packages/shared/prisma/schema.prisma
+// Note: SQLite stores enums as TEXT
+// Type safety enforced by Prisma client
 
-generator client {
-  provider = "prisma-client-js"
-}
+// Mission-related
+enum MissionProfile { SIMPLE, STANDARD, COMPLEX }
+enum MissionStatus { PENDING, IN_PROGRESS, COMPLETED, FAILED, BLOCKED }
+enum PhaseStatus { PENDING, IN_PROGRESS, COMPLETED, FAILED }
+enum CallerType { ORCHESTRATOR, SUBAGENT }
 
-datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
-}
+// Task-related
+enum WorkflowStatus { IN_PROGRESS, COMPLETED, FAILED }
+enum TaskStatus { IN_PROGRESS, SUCCESS, PARTIAL_SUCCESS, FAILED }
+enum DecisionCategory { ARCHITECTURE, LIBRARY_CHOICE, TRADE_OFF, WORKAROUND, OTHER }
+enum IssueType { DOC_GAP, BUG, DEPENDENCY_CONFLICT, UNCLEAR_REQUIREMENT, OTHER }
+enum TestsStatus { PASSED, FAILED, NOT_RUN }
+```
 
-// ============================================
-// ENUMS (Type Safety)
-// ============================================
+### Mission Model
 
-enum WorkflowStatus {
-  IN_PROGRESS
-  COMPLETED
-  FAILED
-}
-
-enum TaskStatus {
-  IN_PROGRESS
-  SUCCESS
-  PARTIAL_SUCCESS
-  FAILED
-}
-
-enum DecisionCategory {
-  ARCHITECTURE
-  LIBRARY_CHOICE
-  TRADE_OFF
-  WORKAROUND
-  OTHER
-}
-
-enum IssueType {
-  DOC_GAP
-  BUG
-  DEPENDENCY_CONFLICT
-  UNCLEAR_REQUIREMENT
-  OTHER
-}
-
-enum TestsStatus {
-  PASSED
-  FAILED
-  NOT_RUN
-}
-
-// ============================================
-// MODELS
-// ============================================
-
-model Workflow {
-  id          String         @id @default(cuid())
+```prisma
+model Mission {
+  id          String   @id @default(cuid())
   name        String
-  description String?        @db.Text
-  plan        Json?          // Structure libre (array d'étapes)
-  status      WorkflowStatus @default(IN_PROGRESS)
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  description String?
 
-  tasks       Task[]
+  // Mission-specific
+  objective   String   // Measurable goal
+  scope       String?  // What's included/excluded
+  constraints String?  // Technical limits
+  profile     String   @default("STANDARD") // MissionProfile
+
+  // Execution state
+  status       String @default("PENDING") // MissionStatus
+  currentPhase Int    @default(0)
+  totalPhases  Int    @default(1)
+
+  // Metadata
+  missionPath String?   // .claude/missions/<name>/
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  completedAt DateTime?
+
+  // Relations
+  phases Phase[]
 
   @@index([status])
   @@index([createdAt])
 }
+```
 
-model Task {
-  id            String      @id @default(cuid())
-  workflowId    String
-  parentTaskId  String?
-  name          String
-  goal          String      @db.Text
-  status        TaskStatus  @default(IN_PROGRESS)
+### Phase Model
 
-  // Scope (indication de zone, ex: ["auth", "api"])
-  areas         String[]
+```prisma
+model Phase {
+  id        String  @id @default(cuid())
+  missionId String
+  mission   Mission @relation(fields: [missionId], references: [id], onDelete: Cascade)
 
-  // Snapshot data (Git ou Checksum)
-  snapshotId    String?
-  snapshotType  String?     // "git" ou "checksum"
-  snapshotData  Json?       // { gitHash: "abc123" } ou { checksums: {...} }
+  number      Int     // Phase sequence (1, 2, 3...)
+  name        String
+  description String?
 
-  // Timing (calculé automatiquement par le MCP)
-  startedAt     DateTime    @default(now())
-  completedAt   DateTime?
-  durationMs    Int?
+  // Execution
+  status     String  @default("PENDING") // PhaseStatus
+  isParallel Boolean @default(false)     // Can tasks run in parallel?
 
-  // Outcome (fourni par l'agent dans complete_task)
-  summary       String?     @db.Text
-  achievements  String[]    // Peut être vide []
-  limitations   String[]    // Peut être vide []
-  manualReviewNeeded Boolean @default(false)
-  manualReviewReason String? @db.Text
-  nextSteps     String[]
-
-  // Metadata (fourni par l'agent)
-  packagesAdded    String[]
-  packagesRemoved  String[]
-  commandsExecuted String[]
-  testsStatus      TestsStatus?
-
-  // Files changed (calculé par le MCP via Git diff)
-  filesAdded       String[]
-  filesModified    String[]
-  filesDeleted     String[]
-
-  // Verification (calculé par le MCP)
-  scopeMatch       Boolean?
-  unexpectedFiles  String[]
-  warnings         String[]
+  // Timing
+  startedAt   DateTime?
+  completedAt DateTime?
 
   // Relations
-  workflow      Workflow   @relation(fields: [workflowId], references: [id], onDelete: Cascade)
-  parentTask    Task?      @relation("TaskHierarchy", fields: [parentTaskId], references: [id])
-  subtasks      Task[]     @relation("TaskHierarchy")
-  decisions     Decision[]
-  issues        Issue[]
-  milestones    Milestone[]
+  tasks Task[]
+
+  @@unique([missionId, number])
+  @@index([missionId])
+}
+```
+
+### Task Model
+
+```prisma
+model Task {
+  id           String  @id @default(cuid())
+  workflowId   String
+  parentTaskId String?
+  name         String
+  goal         String
+  status       String  @default("IN_PROGRESS") // TaskStatus
+
+  // Mission system: Phase relation (optional for backward compat)
+  phaseId String?
+  phase   Phase?  @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+
+  // Caller context
+  callerType  String? // CallerType: ORCHESTRATOR | SUBAGENT
+  agentName   String? // e.g., "feature-implementer"
+  agentPrompt String? // The prompt given to sub-agent (for replay)
+
+  // Scope (JSON array)
+  areas String @default("[]")
+
+  // Snapshot data (Git or Checksum)
+  snapshotId   String?
+  snapshotType String?
+  snapshotData String? // JSON string
+
+  // Timing
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  durationMs  Int?
+
+  // Outcome
+  summary            String?
+  achievements       String  @default("[]") // JSON array
+  limitations        String  @default("[]") // JSON array
+  manualReviewNeeded Boolean @default(false)
+  manualReviewReason String?
+  nextSteps          String  @default("[]") // JSON array
+
+  // Metadata
+  packagesAdded    String  @default("[]") // JSON array
+  packagesRemoved  String  @default("[]") // JSON array
+  commandsExecuted String  @default("[]") // JSON array
+  testsStatus      String? // TestsStatus
+
+  // Token metrics
+  tokensInput  Int?
+  tokensOutput Int?
+
+  // Files changed
+  filesAdded    String @default("[]") // JSON array
+  filesModified String @default("[]") // JSON array
+  filesDeleted  String @default("[]") // JSON array
+
+  // Verification
+  scopeMatch      Boolean?
+  unexpectedFiles String  @default("[]") // JSON array
+  warnings        String  @default("[]") // JSON array
+
+  // Relations
+  workflow   Workflow    @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  parentTask Task?       @relation("TaskHierarchy", fields: [parentTaskId], references: [id])
+  subtasks   Task[]      @relation("TaskHierarchy")
+  decisions  Decision[]
+  issues     Issue[]
+  milestones Milestone[]
 
   @@index([workflowId])
   @@index([parentTaskId])
   @@index([status])
   @@index([startedAt])
+  @@index([phaseId])
+  @@index([callerType])
+  @@index([agentName])
 }
+```
 
+### Workflow Model (Legacy)
+
+```prisma
+model Workflow {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  plan        String? // JSON string
+  status      String  @default("IN_PROGRESS") // WorkflowStatus
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Aggregated metrics
+  totalDurationMs Int?
+  totalTokens     Int?
+
+  tasks Task[]
+
+  @@index([status])
+  @@index([createdAt])
+}
+```
+
+### Decision Model
+
+```prisma
 model Decision {
-  id                  String           @id @default(cuid())
-  taskId              String
-  category            DecisionCategory
-  question            String           @db.Text
-  optionsConsidered   String[]
-  chosen              String
-  reasoning           String           @db.Text
-  tradeOffs           String?          @db.Text
-  createdAt           DateTime         @default(now())
+  id                String   @id @default(cuid())
+  taskId            String
+  category          String   // DecisionCategory
+  question          String
+  optionsConsidered String   @default("[]") // JSON array
+  chosen            String
+  reasoning         String
+  tradeOffs         String?
+  createdAt         DateTime @default(now())
 
-  task                Task             @relation(fields: [taskId], references: [id], onDelete: Cascade)
-
-  @@index([taskId])
-  @@index([createdAt])
-}
-
-model Issue {
-  id                   String    @id @default(cuid())
-  taskId               String
-  type                 IssueType
-  description          String    @db.Text
-  resolution           String    @db.Text
-  requiresHumanReview  Boolean   @default(false)
-  createdAt            DateTime  @default(now())
-
-  task                 Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
-
-  @@index([taskId])
-  @@index([createdAt])
-}
-
-model Milestone {
-  id        String   @id @default(cuid())
-  taskId    String
-  message   String
-  progress  Int?     // 0-100 (optionnel)
-  metadata  Json?    // Structure libre
-  createdAt DateTime @default(now())
-
-  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
 
   @@index([taskId])
   @@index([createdAt])
 }
 ```
 
+### Issue Model
+
+```prisma
+model Issue {
+  id                  String   @id @default(cuid())
+  taskId              String
+  type                String   // IssueType
+  description         String
+  resolution          String
+  requiresHumanReview Boolean  @default(false)
+  createdAt           DateTime @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([createdAt])
+}
+```
+
+### Milestone Model
+
+```prisma
+model Milestone {
+  id        String   @id @default(cuid())
+  taskId    String
+  message   String
+  progress  Int?     // 0-100
+  metadata  String?  // JSON string
+  createdAt DateTime @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([createdAt])
+}
+```
+
+### ServerInfo Model
+
+```prisma
+model ServerInfo {
+  id            String   @id @default("singleton")
+  websocketPort Int
+  startedAt     DateTime @default(now())
+  lastHeartbeat DateTime @default(now())
+  processId     Int?
+}
+```
+
 ---
 
-## Configuration SQLite
+## SQLite Configuration
 
-### Variables d'environnement
+### Environment
 
 ```bash
 # packages/shared/.env
 DATABASE_URL="file:./dev.db"
 ```
 
-**Caractéristiques SQLite** :
-- ✅ Aucun serveur DB à installer
-- ✅ Fichier unique portable (dev.db)
-- ✅ Idéal pour distribution npm/binaire standalone
-- ✅ Type safety TypeScript conservé via Prisma
+### SQLite Specifics
 
-### Gestion des Enums
+- No external DB server needed
+- Single file (dev.db) in `packages/shared/`
+- Ideal for npm/binary standalone distribution
+- TypeScript type safety preserved via Prisma
 
-Prisma gère automatiquement la conversion des enums pour SQLite :
-- Les enums sont stockés comme `TEXT` en base de données
-- Validation Prisma côté application garantit la cohérence
-- Type safety TypeScript complet via le client Prisma généré
+### Enum Handling
 
-**Exemple :**
+Prisma automatically handles enums for SQLite:
+- Stored as `TEXT` in database
+- App-side validation by Prisma client
+- Full TypeScript type safety
+
 ```typescript
-// Type safety complet avec SQLite
-await prisma.task.create({
+// Type safe with SQLite
+await prisma.mission.create({
   data: {
-    status: TaskStatus.IN_PROGRESS, // ✅ Type safe
-    // status: "in_progress" // ❌ Erreur TypeScript
+    status: 'IN_PROGRESS', // ✅ Type safe
+    profile: 'STANDARD',   // ✅ Type safe
   }
 })
 ```
 
-### Gestion des Arrays
+### Array Handling
 
-SQLite ne supporte pas nativement les arrays. Prisma les stocke comme JSON strings :
+SQLite doesn't natively support arrays. Prisma stores them as JSON strings:
 
 ```typescript
-// Arrays gérés automatiquement
+// Arrays handled automatically
 await prisma.task.create({
   data: {
-    areas: ["auth", "database"],          // Stocké comme JSON string
-    filesModified: ["src/auth.ts"],       // Stocké comme JSON string
-    achievements: ["JWT middleware OK"]   // Stocké comme JSON string
+    areas: JSON.stringify(['auth', 'api']),
+    filesModified: JSON.stringify(['src/auth.ts']),
   }
 })
 
-// Lecture transparente
+// Reading is transparent
 const task = await prisma.task.findUnique({ where: { id } })
-console.log(task.areas) // ["auth", "database"] - Array TypeScript normal
+const areas = JSON.parse(task.areas) // ['auth', 'api']
 ```
 
 ---
 
-## Explications des Modèles
+## Model Explanations
 
-### Workflow
+### Mission
 
-**Rôle :** Container de haut niveau pour tout le workflow.
+**Role:** Top-level container for multi-phase orchestration.
 
-**Champs clés :**
-- `name` : Nom court du workflow (ex: "Migration NextAuth")
-- `description` : Description détaillée (optionnel)
-- `plan` : JSON libre (ex: `[{step: "1", goal: "Setup auth"}, ...]`)
-- `status` : Enum strict (IN_PROGRESS, COMPLETED, FAILED)
+| Field | Description |
+|-------|-------------|
+| `objective` | Measurable goal for the mission |
+| `profile` | Complexity: SIMPLE (2), STANDARD (3), COMPLEX (4+) |
+| `status` | PENDING → IN_PROGRESS → COMPLETED/FAILED/BLOCKED |
+| `currentPhase` | Progress tracking (0 = not started) |
+| `totalPhases` | Expected number of phases |
 
-**Exemple :**
-```typescript
-const workflow = await prisma.workflow.create({
-  data: {
-    name: 'Auth System Refactor',
-    description: 'Migrate from custom JWT to NextAuth v5',
-    plan: [
-      { step: '1', goal: 'Install NextAuth' },
-      { step: '2', goal: 'Configure callbacks' }
-    ],
-    status: WorkflowStatus.IN_PROGRESS
-  }
-})
-```
+### Phase
 
----
+**Role:** Sequential execution step within a mission.
+
+| Field | Description |
+|-------|-------------|
+| `number` | Phase sequence (1, 2, 3...) |
+| `status` | PENDING → IN_PROGRESS → COMPLETED/FAILED |
+| `isParallel` | Can tasks within this phase run in parallel? |
+
+**Auto-creation:** Phases are created automatically when the first task with that phase number is started.
 
 ### Task
 
-**Rôle :** Unité de travail (peut avoir des subtasks via `parentTaskId`).
+**Role:** Unit of work with Git snapshot and caller context.
 
-#### Section : Scope & Snapshot
+#### Caller Context
 
-- **`areas`** : Zones du code (ex: `["auth", "database"]`)
-  - Aide à la vérification croisée
-  - Détection de modifications hors scope
+| Field | Description |
+|-------|-------------|
+| `callerType` | ORCHESTRATOR or SUBAGENT |
+| `agentName` | Name of the sub-agent (e.g., "feature-implementer") |
+| `agentPrompt` | Prompt given to sub-agent (for replay) |
 
-- **`snapshotData`** : État du code au démarrage
-  - Si Git : `{gitHash: "abc123"}`
-  - Si Checksum : `{checksums: {"src/auth.ts": "md5hash", ...}}`
+#### Snapshot & Timing
 
-**Exemple :**
-```typescript
-const task = await prisma.task.create({
-  data: {
-    workflowId: 'clx123',
-    name: 'Implement JWT middleware',
-    goal: 'Create middleware to verify JWT tokens',
-    areas: ['auth', 'middleware'],
-    snapshotType: 'git',
-    snapshotData: { gitHash: 'abc123' }
-  }
-})
-```
+| Field | Description |
+|-------|-------------|
+| `snapshotType` | "git" or "checksum" |
+| `snapshotData` | `{ gitHash: "abc123" }` or `{ checksums: {...} }` |
+| `startedAt` | Auto-set at `start_task` |
+| `completedAt` | Auto-set at `complete_task` |
+| `durationMs` | Calculated: completedAt - startedAt |
 
-#### Section : Timing
+#### Files (Auto-calculated)
 
-- **`startedAt`** : Auto-généré au `start_task`
-- **`completedAt`** : Auto-généré au `complete_task`
-- **`durationMs`** : Calculé automatiquement (completedAt - startedAt)
-
-**Calcul automatique :**
-```typescript
-const completedAt = new Date()
-const durationMs = completedAt.getTime() - task.startedAt.getTime()
-
-await prisma.task.update({
-  where: { id: task.id },
-  data: {
-    completedAt,
-    durationMs
-  }
-})
-```
-
-#### Section : Outcome (fourni par l'agent)
-
-- **`summary`** : Résumé de ce qui a été fait (2-4 phrases)
-- **`achievements`** : Array (peut être `[]` si rien de concret)
-- **`limitations`** : Array (peut être `[]` si pas de compromis)
-- **`manualReviewNeeded`** : Boolean (si l'agent veut qu'un humain vérifie)
-
-**Exemple :**
-```typescript
-await prisma.task.update({
-  where: { id: taskId },
-  data: {
-    summary: 'JWT middleware créé et testé avec succès',
-    achievements: [
-      'Middleware vérifie signature JWT',
-      'Tests passent (100% coverage)'
-    ],
-    limitations: [
-      'Refresh tokens non implémentés (feature future)'
-    ],
-    manualReviewNeeded: false
-  }
-})
-```
-
-#### Section : Files (calculé par le MCP)
-
-- **`filesAdded`**, **`filesModified`**, **`filesDeleted`** : Résultat du Git diff
-- **`unexpectedFiles`** : Fichiers modifiés mais hors du scope déclaré
-- **`warnings`** : Messages d'alerte (ex: "⚠️ Fichier hors scope détecté")
-
-**Calcul automatique :**
-```typescript
-// Git diff retourne :
-// A  src/auth/jwt.ts
-// M  package.json
-// D  src/utils/old-jwt.ts
-
-await prisma.task.update({
-  where: { id: taskId },
-  data: {
-    filesAdded: ['src/auth/jwt.ts'],
-    filesModified: ['package.json'],
-    filesDeleted: ['src/utils/old-jwt.ts'],
-    scopeMatch: true,
-    unexpectedFiles: [],
-    warnings: []
-  }
-})
-```
-
----
+| Field | Description |
+|-------|-------------|
+| `filesAdded` | Files created during task |
+| `filesModified` | Files modified during task |
+| `filesDeleted` | Files deleted during task |
+| `scopeMatch` | Did changes match declared `areas`? |
+| `unexpectedFiles` | Files changed outside declared scope |
 
 ### Decision
 
-**Rôle :** Capture une décision architecturale importante.
+**Role:** Capture architectural decisions.
 
-**Quand logger :**
-- Choix de librairie
-- Pattern architectural
-- Compromis technique
-
-**Champs :**
-- `category` : Type de décision (enum)
-- `question` : Question posée
-- `optionsConsidered` : Options évaluées
-- `chosen` : Option choisie
-- `reasoning` : Justification (1-2 phrases)
-- `tradeOffs` : Compromis acceptés (optionnel)
-
-**Exemple :**
-```typescript
-await prisma.decision.create({
-  data: {
-    taskId: 'clx456',
-    category: DecisionCategory.LIBRARY_CHOICE,
-    question: 'Quelle librairie de validation ?',
-    optionsConsidered: ['Zod', 'Yup', 'Joi'],
-    chosen: 'Zod',
-    reasoning: 'Meilleur typage TypeScript natif',
-    tradeOffs: 'Moins de plugins que Joi'
-  }
-})
-```
-
----
+| Category | When to use |
+|----------|-------------|
+| `ARCHITECTURE` | System design choices |
+| `LIBRARY_CHOICE` | Choosing between libraries |
+| `TRADE_OFF` | Accepting compromises |
+| `WORKAROUND` | Technical workarounds |
+| `OTHER` | Other decisions |
 
 ### Issue
 
-**Rôle :** Capture un problème rencontré pendant l'exécution.
+**Role:** Capture problems encountered.
 
-**Types :**
-- `DOC_GAP` : Documentation manquante/obsolète
-- `BUG` : Bug rencontré dans une librairie/code
-- `DEPENDENCY_CONFLICT` : Conflit de versions
-- `UNCLEAR_REQUIREMENT` : Spécification floue
-- `OTHER` : Autre problème
+| Type | Description |
+|------|-------------|
+| `DOC_GAP` | Missing/outdated documentation |
+| `BUG` | Bug in library/code |
+| `DEPENDENCY_CONFLICT` | Version conflicts |
+| `UNCLEAR_REQUIREMENT` | Vague specification |
+| `OTHER` | Other problems |
 
-**Champs :**
-- `type` : Type du problème (enum)
-- `description` : Description du problème
-- `resolution` : Comment il a été résolu
-- `requiresHumanReview` : Boolean (review humaine nécessaire ?)
-
-**Exemple :**
-```typescript
-await prisma.issue.create({
-  data: {
-    taskId: 'clx456',
-    type: IssueType.DOC_GAP,
-    description: 'La doc NextAuth v5 sur les callbacks est obsolète',
-    resolution: 'J\'ai utilisé les exemples GitHub officiels',
-    requiresHumanReview: false
-  }
-})
-```
-
----
-
-### Milestone
-
-**Rôle :** Updates temps réel pour l'UI (ex: "Installation des dépendances...").
-
-**Champs :**
-- `message` : Message court
-- `progress` : 0-100 (optionnel)
-- `metadata` : JSON libre (optionnel)
-
-**Léger :** Ne pas abuser, 3-5 milestones par task max.
-
-**Exemple :**
-```typescript
-await prisma.milestone.create({
-  data: {
-    taskId: 'clx456',
-    message: 'Running tests...',
-    progress: 75,
-    metadata: { test_suite: 'auth' }
-  }
-})
-```
+**Note:** Issues with `requiresHumanReview: true` appear as blockers in `get_context`.
 
 ---
 
 ## Indexes
 
-Les indexes sont optimisés pour les requêtes fréquentes :
+Optimized for frequent queries:
 
-| Modèle | Index | Usage |
-|--------|-------|-------|
-| Workflow | `[status]` | Filtrage workflows en cours |
-| Workflow | `[createdAt]` | Tri chronologique |
-| Task | `[workflowId]` | Requêtes par workflow |
-| Task | `[parentTaskId]` | Navigation hiérarchique |
-| Task | `[status]` | Filtrage tasks en cours |
-| Task | `[startedAt]` | Tri chronologique |
-| Decision | `[taskId]` | Requêtes par task |
-| Decision | `[createdAt]` | Tri chronologique |
-| Issue | `[taskId]` | Requêtes par task |
-| Issue | `[createdAt]` | Tri chronologique |
-| Milestone | `[taskId]` | Requêtes par task |
-| Milestone | `[createdAt]` | Tri chronologique |
+### Mission Indexes
+| Index | Purpose |
+|-------|---------|
+| `[status]` | Filter by mission status |
+| `[createdAt]` | Chronological sort |
 
----
+### Phase Indexes
+| Index | Purpose |
+|-------|---------|
+| `[missionId, number]` | Unique phase per mission |
+| `[missionId]` | Get phases for mission |
 
-## Cascade Delete
-
-Quand un Workflow est supprimé, **toutes** ses Tasks/Decisions/Issues/Milestones sont supprimées automatiquement.
-
-```prisma
-model Task {
-  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
-}
-
-model Decision {
-  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
-}
-```
-
-**Exemple :**
-```typescript
-// Supprimer workflow
-await prisma.workflow.delete({ where: { id: 'clx123' } })
-
-// → TOUTES les Tasks de ce workflow sont supprimées
-// → TOUTES les Decisions/Issues/Milestones de ces Tasks sont supprimées
-```
+### Task Indexes
+| Index | Purpose |
+|-------|---------|
+| `[workflowId]` | Get tasks by workflow |
+| `[phaseId]` | Get tasks by phase |
+| `[parentTaskId]` | Hierarchy navigation |
+| `[status]` | Filter by status |
+| `[startedAt]` | Chronological sort |
+| `[callerType]` | Filter by caller |
+| `[agentName]` | Filter by agent |
 
 ---
 
-## JSON Fields
+## Cascade Deletions
 
-Les champs JSON (`plan`, `snapshotData`, `metadata`) permettent de la flexibilité sans migration.
+When a parent is deleted, all children are automatically deleted:
 
-**Best practices :**
-- Utiliser Zod pour valider côté app
-- Ne pas stocker de données critiques (préférer champs typés)
-- Limiter la taille (max 10KB par JSON)
+```
+Mission deleted
+  └── All Phases deleted
+        └── All Tasks deleted
+              └── All Decisions/Issues/Milestones deleted
 
-**Exemple avec validation Zod :**
+Workflow deleted
+  └── All Tasks deleted
+        └── All Decisions/Issues/Milestones deleted
+```
+
+---
+
+## Common Queries
+
+### Get Mission with Phases and Tasks
+
 ```typescript
-const snapshotDataSchema = z.object({
-  gitHash: z.string(),
+const mission = await prisma.mission.findUnique({
+  where: { id: missionId },
+  include: {
+    phases: {
+      include: { tasks: true },
+      orderBy: { number: 'asc' }
+    }
+  }
 })
+```
 
-const validated = snapshotDataSchema.parse(task.snapshotData)
-// validated.gitHash est type-safe
+### Get Tasks by Phase
+
+```typescript
+const tasks = await prisma.task.findMany({
+  where: { phaseId },
+  include: {
+    decisions: true,
+    issues: true,
+    milestones: true
+  },
+  orderBy: { startedAt: 'asc' }
+})
+```
+
+### Get Blockers for Mission
+
+```typescript
+const blockers = await prisma.issue.findMany({
+  where: {
+    requiresHumanReview: true,
+    task: {
+      phase: {
+        missionId: missionId
+      }
+    }
+  },
+  orderBy: { createdAt: 'desc' }
+})
+```
+
+### Get Tasks by Agent
+
+```typescript
+const tasks = await prisma.task.findMany({
+  where: {
+    agentName: 'feature-implementer',
+    phase: { missionId }
+  },
+  orderBy: { startedAt: 'asc' }
+})
 ```
 
 ---
 
 ## Migrations
 
-### Initialisation
+### Initialize Database
 
 ```bash
 cd packages/shared
 
-# Créer le fichier .env
-cat > .env << EOF
-DATABASE_URL="file:./dev.db"
-EOF
+# Create .env
+echo 'DATABASE_URL="file:./dev.db"' > .env
 
-# Lancer la migration
+# Run migration
 npx prisma migrate dev --name init
 ```
 
-**Note** : Le fichier `dev.db` sera créé automatiquement dans le dossier `packages/shared/`.
-
-### Génération du Client Prisma
+### Generate Prisma Client
 
 ```bash
 npx prisma generate
 ```
 
-Le client TypeScript sera généré dans `node_modules/@prisma/client` avec **tous les enums typés**.
+The TypeScript client is generated in `node_modules/@prisma/client` with **all enums typed**.
 
 ---
 
-## Accès depuis le Monorepo
+## Monorepo Access
 
 ```typescript
-// Dans mcp-server ou web-ui
-import { PrismaClient, TaskStatus, DecisionCategory } from '@prisma/client'
+// In mcp-server or web-ui
+import { PrismaClient, TaskStatus, CallerType, MissionStatus } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
-// Typage strict grâce aux enums
+// Full type safety
+await prisma.mission.create({
+  data: {
+    name: 'Auth System',
+    objective: 'Implement JWT auth',
+    status: 'PENDING',      // ✅ Type safe
+    profile: 'STANDARD',    // ✅ Type safe
+  }
+})
+
 await prisma.task.create({
   data: {
-    status: TaskStatus.IN_PROGRESS, // ✅ Typage strict
-    // status: "in progress" // ❌ Erreur TypeScript
+    callerType: 'ORCHESTRATOR',  // ✅ Type safe
+    status: 'IN_PROGRESS',       // ✅ Type safe
   }
 })
 ```
 
 ### Singleton Pattern
 
-Pour éviter d'épuiser les connexions DB, utiliser un singleton :
+Prevent connection exhaustion:
 
 ```typescript
 // mcp-server/src/db.ts
@@ -600,59 +604,7 @@ if (process.env.NODE_ENV !== 'production') {
 
 ---
 
-## Requêtes Typiques
-
-### Récupérer un Workflow avec toutes ses Tasks
-
-```typescript
-const workflow = await prisma.workflow.findUnique({
-  where: { id: workflowId },
-  include: {
-    tasks: {
-      include: {
-        decisions: true,
-        issues: true,
-        milestones: true,
-        subtasks: true
-      },
-      orderBy: { startedAt: 'asc' }
-    }
-  }
-})
-```
-
-### Récupérer toutes les Tasks en cours
-
-```typescript
-const inProgressTasks = await prisma.task.findMany({
-  where: {
-    status: TaskStatus.IN_PROGRESS
-  },
-  include: {
-    workflow: true
-  },
-  orderBy: {
-    startedAt: 'desc'
-  }
-})
-```
-
-### Récupérer les Décisions d'une Task
-
-```typescript
-const decisions = await prisma.decision.findMany({
-  where: {
-    taskId: taskId
-  },
-  orderBy: {
-    createdAt: 'asc'
-  }
-})
-```
-
----
-
-**Ce document définit le schéma de base de données complet.**
-Pour détails sur l'utilisation, voir :
-- [MCP Protocol](./mcp-protocol.md) : Comment les tools MCP écrivent en DB
-- [Architecture](./architecture.md) : Structure du projet
+**This document defines the database schema.**
+For usage details, see:
+- [MCP Protocol](./mcp-protocol.md): How tools write to DB
+- [Architecture](./architecture.md): Project structure

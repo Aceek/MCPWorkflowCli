@@ -1,294 +1,318 @@
 # Architecture
 
-## Principe Fondamental : Clean Architecture + Feature-Based
+## Core Principle: Clean Architecture + Feature-Based
 
-Le projet suit une architecture **monorepo modulaire** avec séparation stricte des responsabilités (SOC) et isolation des features.
+Mission Control follows a **modular monorepo** architecture with strict separation of concerns (SOC) and feature isolation.
 
-### Pourquoi cette architecture ?
+### Why This Architecture?
 
-**Optimisé pour développement moderne :**
-- ✅ Séparation stricte des responsabilités (shared, mcp-server, web-ui)
-- ✅ Réutilisation du code (types Prisma partagés)
-- ✅ Développement parallèle (packages indépendants)
-- ✅ Scalabilité (ajout de nouveaux packages facile)
+- Strict separation of responsibilities (shared, mcp-server, web-ui)
+- Code reuse (shared Prisma types)
+- Parallel development (independent packages)
+- Scalability (easy to add new packages)
 
 ---
 
-## Structure Monorepo
+## Project Structure
 
 ```
-mcp-workflow-tracker/
+mission-control/
 ├── packages/
-│   ├── shared/            # Types partagés + Prisma Schema
+│   ├── shared/            # Types + Prisma Schema (source of truth)
 │   ├── mcp-server/        # MCP Server (stdio protocol)
-│   └── web-ui/            # Next.js UI (Phase 2)
-├── documentations/        # Documentation générale
-├── pnpm-workspace.yaml    # Config monorepo pnpm
-└── package.json           # Scripts workspace
+│   └── web-ui/            # Next.js Dashboard
+├── mission-system/        # Orchestration docs & templates
+│   ├── docs/
+│   └── agents/
+├── scripts/               # Setup & verification scripts
+├── pnpm-workspace.yaml    # Monorepo config
+└── package.json           # Workspace scripts
 ```
 
-### Principe MCP Protocol
+---
 
-Le **Model Context Protocol (MCP)** est un protocole de communication entre agents AI et tools via **stdio** (standard input/output).
+## MCP Protocol
+
+The **Model Context Protocol (MCP)** enables AI agents to interact with tools via **stdio** (standard input/output).
 
 ```
-Agent AI (Claude Code)
+AI Agent (Claude Code)
         ↓
     MCP Client
         ↓ stdio
     MCP Server ←→ SQLite (local file)
+        ↓ WebSocket
+    Web UI (real-time)
 ```
 
-**Caractéristiques :**
-- Communication JSON-RPC via stdin/stdout
-- Pas de serveur HTTP (pas de port à ouvrir)
-- Lancé automatiquement par l'agent
-- Synchrone (request → response)
+**Characteristics:**
+- Communication via JSON-RPC over stdin/stdout
+- No HTTP server (no port to open)
+- Launched automatically by the agent
+- Synchronous request/response
 
 ---
 
-## Package : shared
+## Mission → Phase → Task Hierarchy
 
-**Rôle :** Types communs + Schéma Prisma centralisé
+Mission Control introduces a hierarchical model for multi-agent orchestration:
+
+```
+Mission (objective, profile: simple|standard|complex)
+│
+├── Phase 1 (auto-created on first task)
+│   ├── Task 1.1 (caller: orchestrator)
+│   └── Task 1.2 (caller: subagent, agent: feature-implementer)
+│
+├── Phase 2
+│   └── Task 2.1 (caller: orchestrator)
+│
+└── Phase 3
+    └── ...
+```
+
+**Key Concepts:**
+
+| Concept | Description |
+|---------|-------------|
+| **Mission** | High-level objective with profile (simple=2 phases, standard=3, complex=4+) |
+| **Phase** | Sequential execution step (auto-created when first task starts) |
+| **Task** | Unit of work with Git snapshot and caller context |
+| **CallerType** | Who started the task: `orchestrator` or `subagent` |
+
+**Auto-Phase Management:**
+- First `start_task` with `phase: 1` auto-creates Phase 1
+- `complete_task` with `phase_complete: true` marks phase as done
+- Mission tracks `currentPhase` for progress
+
+---
+
+## Package: shared
+
+**Role:** Shared types + centralized Prisma Schema
 
 ```
 packages/shared/
 ├── prisma/
-│   ├── schema.prisma      # Schéma DB unique
-│   └── migrations/        # Migrations SQL
+│   ├── schema.prisma      # Unified DB schema
+│   └── migrations/        # SQL migrations
 ├── src/
-│   └── index.ts           # Export types Prisma
+│   └── index.ts           # Re-export Prisma types
 ├── package.json
 ├── tsconfig.json
 └── .env                   # DATABASE_URL
 ```
 
-**Responsabilités :**
-- ✅ Définir le schéma de base de données (Prisma)
-- ✅ Générer le client Prisma typé
-- ✅ Exporter types pour autres packages
-- ❌ Pas de logique métier
+**Responsibilities:**
+- Define database schema (Prisma)
+- Generate typed Prisma client
+- Export types for other packages
+- NO business logic
 
-**Principe d'isolation :**
-- Ce package NE contient QUE des types et le schéma DB
-- Tous les autres packages l'importent : `import { PrismaClient, TaskStatus } from '@prisma/client'`
+**Usage:**
+```typescript
+import { PrismaClient, TaskStatus, CallerType } from '@prisma/client'
+```
 
 ---
 
-## Package : mcp-server
+## Package: mcp-server
 
-**Rôle :** Serveur MCP exposant 6 tools pour tracker workflows
+**Role:** MCP Server exposing 9 tools for mission orchestration and tracking
 
 ```
 packages/mcp-server/
 ├── src/
-│   ├── index.ts               # Point d'entrée MCP (stdio)
+│   ├── index.ts               # MCP entry point (stdio)
 │   ├── db.ts                  # Prisma client singleton
 │   ├── tools/
-│   │   ├── start-workflow.ts  # Tool 1
-│   │   ├── start-task.ts      # Tool 2 (+ Git snapshot)
-│   │   ├── log-decision.ts    # Tool 3
-│   │   ├── log-issue.ts       # Tool 4
-│   │   ├── log-milestone.ts   # Tool 5
-│   │   └── complete-task.ts   # Tool 6 (+ Git diff)
+│   │   ├── start-mission.ts   # Mission orchestration
+│   │   ├── complete-mission.ts
+│   │   ├── get-context.ts
+│   │   ├── start-task.ts      # Task execution (+ Git snapshot)
+│   │   ├── complete-task.ts   # (+ Git diff)
+│   │   ├── log-decision.ts
+│   │   ├── log-issue.ts
+│   │   ├── log-milestone.ts
+│   │   └── start-workflow.ts  # Legacy alias
+│   ├── websocket/             # Real-time event emitters
 │   └── utils/
-│       ├── git-snapshot.ts    # Logique Git robuste
-│       ├── checksum.ts        # Fallback sans Git
-│       └── scope-verify.ts    # Vérification scope
+│       ├── git-snapshot.ts    # Robust Git logic
+│       ├── checksum.ts        # Non-Git fallback
+│       └── scope-verify.ts    # Scope verification
 ├── package.json
-├── tsconfig.json
-└── Dockerfile (futur)
+└── tsconfig.json
 ```
 
-**Responsabilités :**
-- ✅ Implémenter les 6 tools MCP (voir mcp-protocol.md)
-- ✅ Gérer snapshots Git (union commits + working tree)
-- ✅ Calculer fichiers modifiés automatiquement
-- ✅ Valider scope déclaré vs réalité
-- ✅ Écrire en base de données (Prisma)
-- ❌ Pas d'interface utilisateur
-- ❌ Pas de serveur HTTP
+**Responsibilities:**
+- Implement 9 MCP tools (see mcp-protocol.md)
+- Manage Git snapshots (union commits + working tree)
+- Calculate modified files automatically
+- Validate declared scope vs reality
+- Write to database (Prisma)
+- Emit WebSocket events for real-time UI
+- NO user interface, NO HTTP server
 
-**Architecture interne :**
-
+**MCP Server Registration:**
 ```typescript
-// index.ts : Point d'entrée MCP
 import { Server } from '@modelcontextprotocol/sdk/server/index.js'
 
 const server = new Server(
-  { name: 'mcp-workflow-tracker', version: '1.0.0' },
+  { name: 'mission-control', version: '2.0.0' },
   { capabilities: { tools: {} } }
 )
 
-// Enregistrement des tools
 server.setRequestHandler(ListToolsRequestSchema, async () => ({
   tools: [
-    { name: 'start_workflow', inputSchema: { ... } },
-    { name: 'start_task', inputSchema: { ... } },
-    // ... 4 autres tools
+    startMissionTool,
+    completeMissionTool,
+    getContextTool,
+    startTaskTool,
+    completeTaskTool,
+    // ... 4 more tools
   ]
 }))
-
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  const { name, arguments: args } = request.params
-
-  switch (name) {
-    case 'start_workflow':
-      return await handleStartWorkflow(args)
-    case 'start_task':
-      return await handleStartTask(args)
-    // ...
-  }
-})
-
-// Lancement stdio
-const transport = new StdioServerTransport()
-await server.connect(transport)
 ```
-
-**Principe DRY :**
-- Chaque tool = 1 fichier
-- Utils réutilisables (git-snapshot.ts, scope-verify.ts)
-- Pas de duplication de logique
 
 ---
 
-## Package : web-ui (Phase 2)
+## Package: web-ui
 
-**Rôle :** Interface Next.js pour visualiser workflows en temps réel
+**Role:** Next.js Dashboard for real-time visualization
 
 ```
 packages/web-ui/
 ├── src/
 │   ├── app/
-│   │   ├── page.tsx                 # Liste workflows
+│   │   ├── page.tsx                 # Home
+│   │   ├── missions/
+│   │   │   ├── page.tsx             # Missions list
+│   │   │   └── [id]/page.tsx        # Mission detail
 │   │   └── workflow/[id]/
-│   │       └── page.tsx             # Détails workflow
+│   │       └── page.tsx             # Legacy workflow detail
 │   ├── components/
-│   │   ├── TreeView.tsx             # Vue hiérarchique
-│   │   ├── DiffViewer.tsx           # Affichage diffs
-│   │   ├── Timeline.tsx             # Timeline milestones
-│   │   └── DecisionCard.tsx
-│   ├── lib/
-│   │   ├── prisma.ts                # Prisma client
-│   │   └── websocket.ts             # Socket.io client
-│   └── api/
-│       ├── workflows/route.ts       # GET /api/workflows
-│       └── workflow/[id]/route.ts   # GET /api/workflow/:id
+│   │   ├── mission/
+│   │   │   ├── MissionCard.tsx
+│   │   │   ├── PhaseTimeline.tsx
+│   │   │   ├── PhaseCard.tsx
+│   │   │   ├── AgentBadge.tsx
+│   │   │   └── BlockerAlert.tsx
+│   │   ├── TreeView.tsx
+│   │   ├── DiffViewer.tsx
+│   │   └── Timeline.tsx
+│   ├── hooks/
+│   │   ├── useRealtimeMissions.ts
+│   │   └── useRealtimeMission.ts
+│   └── lib/
+│       ├── prisma.ts
+│       └── websocket.ts
 ├── package.json
-├── next.config.js
-└── Dockerfile (futur)
+└── next.config.ts
 ```
 
-**Responsabilités :**
-- ✅ Lire la base de données (via API routes)
-- ✅ Afficher workflows hiérarchiques
-- ✅ Visualiser diffs de fichiers
-- ✅ Updates temps réel (WebSocket)
-- ❌ Pas d'écriture en DB (read-only)
-- ❌ Pas de modification de workflows
-
-**Communication temps réel :**
-```
-MCP Server                Web UI
-     │                       │
-     │  DB Write (Prisma)    │
-     ├─────────────→ SQLite (local file)
-     │                       │
-     │  Emit WebSocket       │
-     ├───────────────────────→│
-     │                       │
-     │                   Update UI
-```
+**Responsibilities:**
+- Read database via API routes
+- Display mission → phase → task hierarchy
+- Visualize file diffs
+- Real-time updates (WebSocket)
+- NO database writes (read-only)
 
 ---
 
-## Règles d'Isolation
+## Data Flow
 
-### Shared Package
-
-**✅ Peut contenir :**
-- Schéma Prisma
-- Types générés par Prisma
-- Enums TypeScript
-
-**❌ Ne peut PAS contenir :**
-- Logique métier
-- Appels API
-- Code spécifique MCP/UI
-
-### MCP Server Package
-
-**✅ Peut :**
-- Importer depuis `@prisma/client` (shared)
-- Importer depuis `simple-git`, `glob`, etc.
-- Écrire en DB via Prisma
-
-**❌ Ne peut PAS :**
-- Avoir du code UI
-- Exposer des endpoints HTTP
-- Importer depuis web-ui
-
-### Web UI Package
-
-**✅ Peut :**
-- Importer depuis `@prisma/client` (shared)
-- Lire la DB via Prisma
-- Exposer API routes Next.js
-
-**❌ Ne peut PAS :**
-- Écrire en DB (workflows créés uniquement via MCP)
-- Importer depuis mcp-server
-- Appeler tools MCP directement
-
----
-
-## Flow de Données
-
-### Création Workflow
+### Mission Creation
 
 ```
-1. Agent AI appelle start_workflow via MCP
+1. Agent calls start_mission via MCP
    ↓
-2. MCP Server valide arguments
+2. MCP Server validates arguments (Zod)
    ↓
-3. MCP Server écrit en DB (Prisma)
+3. MCP Server creates Mission in DB (Prisma)
    ↓
-4. MCP Server émet WebSocket (optionnel)
+4. MCP Server emits WebSocket event (mission:created)
    ↓
-5. Web UI reçoit update temps réel
+5. Web UI receives real-time update
    ↓
-6. Web UI affiche nouveau workflow
+6. Web UI displays new mission
 ```
 
-### Completion Task (CRITIQUE)
+### Task Completion (CRITICAL)
 
 ```
-1. Agent AI appelle complete_task via MCP
+1. Agent calls complete_task via MCP
    ↓
-2. MCP Server :
-   a) Calcule durée (completedAt - startedAt)
-   b) Lance Git diff (commits + working tree)
-   c) Parse fichiers Added/Modified/Deleted
-   d) Vérifie scope (areas vs fichiers réels)
-   e) Génère warnings si hors scope
+2. MCP Server:
+   a) Calculates duration (completedAt - startedAt)
+   b) Runs Git diff (commits + working tree union)
+   c) Parses files Added/Modified/Deleted
+   d) Verifies scope (areas vs actual files)
+   e) Generates warnings if out of scope
    ↓
-3. MCP Server update DB avec TOUTES les données
+3. MCP Server updates DB with ALL data
    ↓
-4. Web UI affiche :
-   - Fichiers modifiés (avec diff viewer)
-   - Warnings de scope
-   - Durée de la task
+4. If phase_complete=true:
+   a) Updates Phase status to COMPLETED
+   b) Updates Mission currentPhase
+   ↓
+5. Emits WebSocket events
+   ↓
+6. Web UI displays:
+   - Modified files (with diff viewer)
+   - Scope warnings
+   - Task duration
    - Achievements/Limitations
 ```
 
 ---
 
-## Patterns Architecturaux
+## Isolation Rules
 
-### 1. Singleton Prisma Client
+### shared Package
 
-Éviter les multiples instances de Prisma (épuise les connexions DB).
+**CAN contain:**
+- Prisma schema
+- Prisma-generated types
+- TypeScript enums
+
+**CANNOT contain:**
+- Business logic
+- API calls
+- MCP/UI specific code
+
+### mcp-server Package
+
+**CAN:**
+- Import from `@prisma/client` (shared)
+- Import from `simple-git`, `glob`, etc.
+- Write to DB via Prisma
+- Emit WebSocket events
+
+**CANNOT:**
+- Have UI code
+- Expose HTTP endpoints
+- Import from web-ui
+
+### web-ui Package
+
+**CAN:**
+- Import from `@prisma/client` (shared)
+- Read DB via Prisma
+- Expose Next.js API routes
+- Listen to WebSocket events
+
+**CANNOT:**
+- Write to DB (workflows created only via MCP)
+- Import from mcp-server
+- Call MCP tools directly
+
+---
+
+## Architectural Patterns
+
+### 1. Prisma Client Singleton
+
+Avoid multiple Prisma instances (exhausts DB connections).
 
 ```typescript
 // mcp-server/src/db.ts
@@ -305,80 +329,85 @@ if (process.env.NODE_ENV !== 'production') {
 }
 ```
 
-### 2. Git Snapshot Robuste (Union Commits + Working Tree)
+### 2. Robust Git Snapshot (Union Commits + Working Tree)
 
-**Problème :** Capturer TOUS les changements (committés ET non committés).
+**Problem:** Capture ALL changes (committed AND uncommitted).
 
-**Solution :**
+**Solution:**
 ```typescript
-// Au start_task : Stocke hash actuel
+// At start_task: Store current hash
 const startHash = await git.revparse(['HEAD']) // → "abc123"
 
-// Au complete_task : Union de 2 diffs
+// At complete_task: Union of 2 diffs
 const committedDiff = await git.diff([startHash, 'HEAD', '--name-status'])
 const workingTreeDiff = await git.diff(['HEAD', '--name-status'])
 
-// Union = vérité absolue
+// Union = absolute truth
 const allChanges = merge(committedDiff, workingTreeDiff)
 ```
 
-### 3. Validation à la Frontière
+### 3. Boundary Validation
 
-Toutes les entrées MCP sont validées AVANT la logique métier.
+All MCP inputs are validated BEFORE business logic.
 
 ```typescript
-// tools/start-workflow.ts
-export async function handleStartWorkflow(args: unknown) {
-  // 1. Validation Zod
-  const validated = startWorkflowSchema.parse(args)
+// tools/start-mission.ts
+export async function handleStartMission(args: unknown) {
+  // 1. Zod validation
+  const validated = startMissionSchema.parse(args)
 
-  // 2. Logique métier
-  const workflow = await prisma.workflow.create({
+  // 2. Business logic
+  const mission = await prisma.mission.create({
     data: validated
   })
 
-  return { workflow_id: workflow.id }
+  return { mission_id: mission.id }
 }
 ```
 
 ### 4. Feature Isolation
 
-Chaque tool MCP est isolé dans son propre fichier.
+Each MCP tool is isolated in its own file.
 
 ```
 tools/
-├── start-workflow.ts      # Feature : Init workflow
-├── start-task.ts          # Feature : Init task + snapshot
-├── complete-task.ts       # Feature : Finalize + diff
-└── ...
+├── start-mission.ts      # Mission lifecycle
+├── complete-mission.ts
+├── get-context.ts        # Mission queries
+├── start-task.ts         # Task lifecycle (+ snapshot)
+├── complete-task.ts      # (+ diff)
+├── log-decision.ts       # Structured logging
+├── log-issue.ts
+├── log-milestone.ts
+└── start-workflow.ts     # Legacy support
 ```
 
 ---
 
-## Sécurité
+## Security
 
-### 1. Pas de Secrets Hardcodés
+### 1. No Hardcoded Secrets
 
 ```typescript
-// ❌ MAUVAIS
+// ❌ BAD
 const DATABASE_URL = 'postgresql://user:pass@localhost/db'
 
-// ✅ BON
+// ✅ GOOD
 const DATABASE_URL = process.env.DATABASE_URL!
 if (!DATABASE_URL) throw new Error('DATABASE_URL required')
 ```
 
-### 2. Validation Stricte
+### 2. Strict Validation
 
-Toutes les entrées MCP passent par des schémas Zod.
+All MCP inputs pass through Zod schemas.
 
-### 3. Isolation Filesystem
+### 3. Filesystem Isolation
 
-Le MCP server NE peut accéder qu'au répertoire Git du projet (via simple-git).
+MCP server can ONLY access the project's Git directory (via simple-git).
 
 ### 4. Read-Only UI
 
-L'interface web NE peut PAS modifier les workflows (immutabilité des données).
+The web interface CANNOT modify missions/workflows (data immutability).
 
 ---
 
@@ -388,62 +417,45 @@ L'interface web NE peut PAS modifier les workflows (immutabilité des données).
 
 ```prisma
 model Task {
-  @@index([workflowId])      // Requêtes par workflow
-  @@index([status])          // Filtrage par status
-  @@index([startedAt])       // Tri chronologique
+  @@index([workflowId])      // Queries by workflow
+  @@index([phaseId])         // Queries by phase
+  @@index([status])          // Filter by status
+  @@index([startedAt])       // Chronological sort
+  @@index([callerType])      // Filter by caller
+  @@index([agentName])       // Filter by agent
+}
+
+model Phase {
+  @@unique([missionId, number])  // Unique phase per mission
+  @@index([missionId])
+}
+
+model Mission {
+  @@index([status])
+  @@index([createdAt])
 }
 ```
 
 ### Cascade Deletions
 
-Suppression automatique des données liées :
+Automatic deletion of related data:
 ```prisma
+model Phase {
+  mission Mission @relation(fields: [missionId], references: [id], onDelete: Cascade)
+}
+
 model Task {
-  workflow Workflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  phase Phase? @relation(fields: [phaseId], references: [id], onDelete: Cascade)
 }
 ```
 
-Quand un Workflow est supprimé → TOUTES ses Tasks/Decisions/Issues/Milestones sont supprimées.
+When a Mission is deleted → ALL its Phases/Tasks/Decisions/Issues/Milestones are deleted.
 
 ---
 
-## Exemple Concret : Flow Complete
-
-```
-10:00 → Agent : start_workflow("Migration NextAuth")
-        MCP   : CREATE workflow in DB
-        MCP   : RETURN workflow_id="clx123"
-
-10:05 → Agent : start_task(workflow_id, "Setup routes")
-        MCP   : Git snapshot (hash="abc123")
-        MCP   : CREATE task in DB
-        MCP   : RETURN task_id="clx456"
-
-10:10 → Agent : log_decision(task_id, "LIBRARY_CHOICE", "NextAuth v5")
-        MCP   : CREATE decision in DB
-
-10:15 → Agent : log_milestone(task_id, "Installing dependencies...")
-        MCP   : CREATE milestone + WebSocket emit
-        UI    : Affiche "Installing dependencies..." en temps réel
-
-10:20 → Agent : Modifie auth.ts, database.ts
-        Agent : Commit → hash="def456"
-        Agent : Modifie config.ts (non commité)
-
-10:25 → Agent : complete_task(task_id, status="success", outcome={...})
-        MCP   : Git diff abc123..def456 → auth.ts, database.ts
-        MCP   : Git diff def456..HEAD   → config.ts
-        MCP   : Union → [auth.ts, database.ts, config.ts]
-        MCP   : UPDATE task in DB
-        MCP   : RETURN files_changed + verification
-        UI    : Affiche task terminée avec diffs
-```
-
----
-
-**Ce document définit l'architecture globale.**
-Pour détails spécifiques, voir :
-- [MCP Protocol](./mcp-protocol.md) : Spécifications des 6 tools
-- [Database](./database.md) : Schéma Prisma complet
-- [Standards](./standards.md) : Conventions de code
-- [Tech Stack](./tech-stack.md) : Technologies utilisées
+**This document defines the global architecture.**
+For specific details, see:
+- [MCP Protocol](./mcp-protocol.md): 9 tools specifications
+- [Database](./database.md): Complete Prisma schema
+- [Standards](./standards.md): Code conventions
+- [Tech Stack](./tech-stack.md): Technologies used
