@@ -96,3 +96,6 @@ Thumbs.db
 # Misc
 *.pem
 .vercel
+
+# MCP config (machine-specific)
+.mcp.json

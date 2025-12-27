@@ -16,6 +16,7 @@ NC='\033[0m' # No Color
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 MCP_SERVER_PATH="$PROJECT_DIR/packages/mcp-server/dist/index.js"
+DATABASE_PATH="$PROJECT_DIR/packages/shared/prisma/mcp-tracker.db"
 
 # Flags
 OUTPUT_DIR=""
@@ -88,7 +89,9 @@ generate_config() {
     "mission-control": {
       "command": "node",
       "args": ["$MCP_SERVER_PATH"],
-      "env": {}
+      "env": {
+        "DATABASE_URL": "file:$DATABASE_PATH"
+      }
     }
   }
 }
