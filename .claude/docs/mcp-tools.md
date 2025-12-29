@@ -46,14 +46,60 @@
 
 ### get_context
 
-| Field | Type | Required |
-|-------|------|----------|
-| `workflow_id` | string | yes |
-| `include` | string[] | yes | `decisions`\|`milestones`\|`blockers`\|`phase_summary`\|`tasks` |
-| `filter.phase` | number | no |
-| `filter.agent` | string | no |
+Primary tool for accessing workflow "memory" and state.
 
-**Returns**: Context data based on `include` array
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `workflow_id` | string | yes | Workflow ID to query |
+| `include` | string[] | yes | What to include (see below) |
+| `filter.phase` | number | no | Filter by phase number (1, 2, 3...) |
+| `filter.agent` | string | no | Filter by agent name |
+| `filter.since` | string | no | Filter by timestamp (ISO format) |
+
+**Include Options**:
+| Option | Returns |
+|--------|---------|
+| `phase_summary` | Array of phases with task counts, status, duration |
+| `tasks` | Filtered task list with status and metadata |
+| `decisions` | Architectural decisions with reasoning |
+| `milestones` | Progress updates from agents |
+| `blockers` | Issues with `requiresHumanReview=true` |
+
+**Returns**:
+```typescript
+{
+  workflow_id, workflow_name, workflow_status,
+  current_phase, total_phases,
+  // If include contains 'phase_summary':
+  phase_summary: [{
+    phase_number, phase_name, phase_id, status, is_parallel,
+    tasks: { total, completed, failed, in_progress },
+    duration_seconds, started_at, completed_at
+  }],
+  // If include contains 'tasks':
+  tasks: [{ id, phase_id, name, goal, status, agent_name, ... }],
+  tasks_count,
+  // If include contains 'blockers':
+  blockers: [...], blockers_count, has_blockers,
+  // If filters applied:
+  filters_applied: { phase, agent, since }
+}
+```
+
+**Examples**:
+```typescript
+// Get phase overview
+get_context({ workflow_id: "xxx", include: ["phase_summary"] })
+
+// Get blockers for monitoring
+get_context({ workflow_id: "xxx", include: ["blockers", "tasks"] })
+
+// Filter by phase 2
+get_context({ workflow_id: "xxx", include: ["tasks", "decisions"], filter: { phase: 2 } })
+
+// Filter by agent
+get_context({ workflow_id: "xxx", include: ["milestones"], filter: { agent: "feature-implementer" } })
+```
 
 ## Phase Tools
 
